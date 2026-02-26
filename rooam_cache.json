@@ -1,0 +1,2050 @@
+{
+  "last_updated": "2026-02-26T20:29:58.0428961Z",
+  "cost_centers": [
+    {
+      "store": "   1",
+      "code": 0,
+      "name": "ENTIRE HOUSE"
+    },
+    {
+      "store": "   1",
+      "code": 1,
+      "name": "BAR"
+    },
+    {
+      "store": "   1",
+      "code": 2,
+      "name": "DINING ROOM"
+    },
+    {
+      "store": "   1",
+      "code": 3,
+      "name": "EAT IN"
+    },
+    {
+      "store": "   1",
+      "code": 4,
+      "name": "DELIVERY"
+    },
+    {
+      "store": "   1",
+      "code": 5,
+      "name": "TRAINING"
+    },
+    {
+      "store": "   1",
+      "code": 6,
+      "name": "ROOAM"
+    }
+  ],
+  "tenders": [
+    {
+      "store": "   1",
+      "code": 1,
+      "name": "CASH"
+    },
+    {
+      "store": "   1",
+      "code": 3,
+      "name": "VISA"
+    },
+    {
+      "store": "   1",
+      "code": 4,
+      "name": "MASTERCARD"
+    },
+    {
+      "store": "   1",
+      "code": 5,
+      "name": "DISCOVER"
+    },
+    {
+      "store": "   1",
+      "code": 6,
+      "name": "AMEX"
+    },
+    {
+      "store": "   1",
+      "code": 8,
+      "name": "CLUB ACCT"
+    },
+    {
+      "store": "   1",
+      "code": 9,
+      "name": "PER. CHECK"
+    },
+    {
+      "store": "   1",
+      "code": 10,
+      "name": "ROOAM"
+    },
+    {
+      "store": "   1",
+      "code": 15,
+      "name": "3rd Party"
+    },
+    {
+      "store": "   1",
+      "code": 18,
+      "name": "BILT"
+    },
+    {
+      "store": "   1",
+      "code": 19,
+      "name": "ROOAM CLOS"
+    },
+    {
+      "store": "   1",
+      "code": 20,
+      "name": "TOUCH HERE"
+    },
+    {
+      "store": "   1",
+      "code": 27,
+      "name": "Manager Paidout"
+    },
+    {
+      "store": "   1",
+      "code": 28,
+      "name": "Training"
+    },
+    {
+      "store": "   1",
+      "code": 29,
+      "name": "MANAGER"
+    },
+    {
+      "store": "   1",
+      "code": 30,
+      "name": "EMPLOYEE 50 PERC"
+    },
+    {
+      "store": "   1",
+      "code": 31,
+      "name": "OPEN PERCENT DIS"
+    },
+    {
+      "store": "   1",
+      "code": 32,
+      "name": "OPEN DOLLAR"
+    },
+    {
+      "store": "   1",
+      "code": 33,
+      "name": "TAX EXEMPT DISCO"
+    },
+    {
+      "store": "   1",
+      "code": 34,
+      "name": "$25 LOYALTY"
+    }
+  ],
+  "employees": [
+    {
+      "store": "   1",
+      "number": 510,
+      "last_name": "",
+      "first_name": "TO EP",
+      "type": 1,
+      "mag_card_id": 53
+    },
+    {
+      "store": "   1",
+      "number": 976,
+      "last_name": "1",
+      "first_name": "ROOAM",
+      "type": 5,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 805,
+      "last_name": "ABBOOD",
+      "first_name": "CAROL",
+      "type": 1,
+      "mag_card_id": 7006
+    },
+    {
+      "store": "   1",
+      "number": 56,
+      "last_name": "AHERNS",
+      "first_name": "AMY",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 507,
+      "last_name": "ALBANESA",
+      "first_name": "REGINA",
+      "type": 3,
+      "mag_card_id": 1108
+    },
+    {
+      "store": "   1",
+      "number": 838,
+      "last_name": "ALBANESA",
+      "first_name": "REGINA",
+      "type": 1,
+      "mag_card_id": 7110
+    },
+    {
+      "store": "   1",
+      "number": 906,
+      "last_name": "ALMEDA",
+      "first_name": "WENDY",
+      "type": 1,
+      "mag_card_id": 7236
+    },
+    {
+      "store": "   1",
+      "number": 30,
+      "last_name": "ANDERSON",
+      "first_name": "TANISHA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 948,
+      "last_name": "ANGEL",
+      "first_name": "FLAVIO",
+      "type": 1,
+      "mag_card_id": 7245
+    },
+    {
+      "store": "   1",
+      "number": 509,
+      "last_name": "ANTAYA",
+      "first_name": "CHERYL-ANN",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 514,
+      "last_name": "ARSENAULT",
+      "first_name": "JOHANNA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 902,
+      "last_name": "ATKINSON",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 7178
+    },
+    {
+      "store": "   1",
+      "number": 6,
+      "last_name": "AUDETTE",
+      "first_name": "JESSICA",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 799,
+      "last_name": "BACON",
+      "first_name": "BOB",
+      "type": 1,
+      "mag_card_id": 4
+    },
+    {
+      "store": "   1",
+      "number": 24,
+      "last_name": "BACON",
+      "first_name": "BOBBIE",
+      "type": 1,
+      "mag_card_id": 1101
+    },
+    {
+      "store": "   1",
+      "number": 930,
+      "last_name": "BACON",
+      "first_name": "BOBBIE",
+      "type": 1,
+      "mag_card_id": 7132
+    },
+    {
+      "store": "   1",
+      "number": 126,
+      "last_name": "BAETZEL",
+      "first_name": "RUTH",
+      "type": 1,
+      "mag_card_id": 1202
+    },
+    {
+      "store": "   1",
+      "number": 921,
+      "last_name": "BAETZEL",
+      "first_name": "RUTH",
+      "type": 1,
+      "mag_card_id": 7123
+    },
+    {
+      "store": "   1",
+      "number": 950,
+      "last_name": "BAIN",
+      "first_name": "CHRISTINA",
+      "type": 1,
+      "mag_card_id": 7173
+    },
+    {
+      "store": "   1",
+      "number": 834,
+      "last_name": "BAKER",
+      "first_name": "LARRY",
+      "type": 1,
+      "mag_card_id": 7087
+    },
+    {
+      "store": "   1",
+      "number": 877,
+      "last_name": "BALLOU",
+      "first_name": "CHRIS",
+      "type": 1,
+      "mag_card_id": 7171
+    },
+    {
+      "store": "   1",
+      "number": 64,
+      "last_name": "BALLOU",
+      "first_name": "JUNE",
+      "type": 1,
+      "mag_card_id": 1211
+    },
+    {
+      "store": "   1",
+      "number": 102,
+      "last_name": "BAR 1",
+      "first_name": "BAR 1",
+      "type": 3,
+      "mag_card_id": 1143
+    },
+    {
+      "store": "   1",
+      "number": 23,
+      "last_name": "BARROWS",
+      "first_name": "C",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 19,
+      "last_name": "BARROWS",
+      "first_name": "M",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 843,
+      "last_name": "BARROWS",
+      "first_name": "MARY",
+      "type": 1,
+      "mag_card_id": 7089
+    },
+    {
+      "store": "   1",
+      "number": 840,
+      "last_name": "BARRY",
+      "first_name": "LIZBETH",
+      "type": 1,
+      "mag_card_id": 7101
+    },
+    {
+      "store": "   1",
+      "number": 73,
+      "last_name": "BARRY",
+      "first_name": "LIZBETH",
+      "type": 1,
+      "mag_card_id": 1116
+    },
+    {
+      "store": "   1",
+      "number": 44,
+      "last_name": "BEAUPRE",
+      "first_name": "KAMI",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 887,
+      "last_name": "BOYAJIAN",
+      "first_name": "ROBIN",
+      "type": 1,
+      "mag_card_id": 7213
+    },
+    {
+      "store": "   1",
+      "number": 893,
+      "last_name": "BRADY",
+      "first_name": "PATRICIA",
+      "type": 1,
+      "mag_card_id": 7227
+    },
+    {
+      "store": "   1",
+      "number": 33,
+      "last_name": "BUCHANAN",
+      "first_name": "SABRINA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 43,
+      "last_name": "BURGESS",
+      "first_name": "KIMBERLY",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 897,
+      "last_name": "BUTLER",
+      "first_name": "AMY",
+      "type": 1,
+      "mag_card_id": 7229
+    },
+    {
+      "store": "   1",
+      "number": 910,
+      "last_name": "BUTLER",
+      "first_name": "ARNOLD",
+      "type": 1,
+      "mag_card_id": 7016
+    },
+    {
+      "store": "   1",
+      "number": 18,
+      "last_name": "CABRAL",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 953,
+      "last_name": "CARLSON",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 7176
+    },
+    {
+      "store": "   1",
+      "number": 841,
+      "last_name": "CARLUCCI",
+      "first_name": "MILLIE",
+      "type": 1,
+      "mag_card_id": 7054
+    },
+    {
+      "store": "   1",
+      "number": 883,
+      "last_name": "CATANZARO",
+      "first_name": "DEBORAH",
+      "type": 1,
+      "mag_card_id": 7084
+    },
+    {
+      "store": "   1",
+      "number": 21,
+      "last_name": "CHACE",
+      "first_name": "TINA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 524,
+      "last_name": "CHARTIER",
+      "first_name": "MICHELLE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 835,
+      "last_name": "COCROFT",
+      "first_name": "JOYCE",
+      "type": 1,
+      "mag_card_id": 7088
+    },
+    {
+      "store": "   1",
+      "number": 870,
+      "last_name": "CONHEENY",
+      "first_name": "PETER",
+      "type": 1,
+      "mag_card_id": 7071
+    },
+    {
+      "store": "   1",
+      "number": 828,
+      "last_name": "CONTRERAS",
+      "first_name": "BROOKE",
+      "type": 1,
+      "mag_card_id": 7232
+    },
+    {
+      "store": "   1",
+      "number": 911,
+      "last_name": "CORDEIRO",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 7017
+    },
+    {
+      "store": "   1",
+      "number": 804,
+      "last_name": "COSTA",
+      "first_name": "DUARTE",
+      "type": 1,
+      "mag_card_id": 7005
+    },
+    {
+      "store": "   1",
+      "number": 59,
+      "last_name": "COSTANTINO",
+      "first_name": "CAROLE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 100,
+      "last_name": "COURTOIS",
+      "first_name": "JANET",
+      "type": 1,
+      "mag_card_id": 76
+    },
+    {
+      "store": "   1",
+      "number": 871,
+      "last_name": "COURTOIS",
+      "first_name": "JANET",
+      "type": 1,
+      "mag_card_id": 7072
+    },
+    {
+      "store": "   1",
+      "number": 20,
+      "last_name": "COUTURE",
+      "first_name": "MAUREEN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 51,
+      "last_name": "D'OSTUNI",
+      "first_name": "JOANNE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 934,
+      "last_name": "DECOSTA",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 7039
+    },
+    {
+      "store": "   1",
+      "number": 873,
+      "last_name": "DECOTIS",
+      "first_name": "KATHY",
+      "type": 1,
+      "mag_card_id": 7074
+    },
+    {
+      "store": "   1",
+      "number": 947,
+      "last_name": "DEJESUS",
+      "first_name": "VICTOR",
+      "type": 1,
+      "mag_card_id": 7197
+    },
+    {
+      "store": "   1",
+      "number": 15,
+      "last_name": "DIBIASO",
+      "first_name": "GINA",
+      "type": 1,
+      "mag_card_id": 1257
+    },
+    {
+      "store": "   1",
+      "number": 523,
+      "last_name": "DODD",
+      "first_name": "HEATHER",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 889,
+      "last_name": "DONNELLY",
+      "first_name": "MARY",
+      "type": 1,
+      "mag_card_id": 7092
+    },
+    {
+      "store": "   1",
+      "number": 22,
+      "last_name": "DONNELLY",
+      "first_name": "MARY",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 884,
+      "last_name": "DORIS",
+      "first_name": "SUSAN",
+      "type": 1,
+      "mag_card_id": 7085
+    },
+    {
+      "store": "   1",
+      "number": 891,
+      "last_name": "DOUKAS",
+      "first_name": "LEONIDAS",
+      "type": 1,
+      "mag_card_id": 7068
+    },
+    {
+      "store": "   1",
+      "number": 916,
+      "last_name": "DOYLE",
+      "first_name": "MICHAEL",
+      "type": 1,
+      "mag_card_id": 7015
+    },
+    {
+      "store": "   1",
+      "number": 11,
+      "last_name": "DUBOIS",
+      "first_name": "GERRIE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 849,
+      "last_name": "DUBOIS",
+      "first_name": "GERRY",
+      "type": 1,
+      "mag_card_id": 7099
+    },
+    {
+      "store": "   1",
+      "number": 959,
+      "last_name": "DUNN",
+      "first_name": "JODIE",
+      "type": 1,
+      "mag_card_id": 7053
+    },
+    {
+      "store": "   1",
+      "number": 945,
+      "last_name": "DUONG",
+      "first_name": "TUYEN",
+      "type": 1,
+      "mag_card_id": 7152
+    },
+    {
+      "store": "   1",
+      "number": 865,
+      "last_name": "DUPRE",
+      "first_name": "THOMAS",
+      "type": 1,
+      "mag_card_id": 7066
+    },
+    {
+      "store": "   1",
+      "number": 72,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 75,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 60,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 74,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 82,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 81,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 65,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 67,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 70,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 69,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 76,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 62,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 79,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 61,
+      "last_name": "EMPLOYER",
+      "first_name": "TESTED",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 58,
+      "last_name": "EMPLOYER",
+      "first_name": "TESTED",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 851,
+      "last_name": "EVERIDGE",
+      "first_name": "JACK",
+      "type": 1,
+      "mag_card_id": 7105
+    },
+    {
+      "store": "   1",
+      "number": 16,
+      "last_name": "FERNANDES",
+      "first_name": "SUZANA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 516,
+      "last_name": "FISH",
+      "first_name": "KERI",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 833,
+      "last_name": "FITZPATRICK",
+      "first_name": "EDWARD",
+      "type": 1,
+      "mag_card_id": 7034
+    },
+    {
+      "store": "   1",
+      "number": 952,
+      "last_name": "FLORENZ",
+      "first_name": "MICHAEL",
+      "type": 1,
+      "mag_card_id": 7246
+    },
+    {
+      "store": "   1",
+      "number": 823,
+      "last_name": "FLORIAN",
+      "first_name": "ESTEBAN",
+      "type": 1,
+      "mag_card_id": 7024
+    },
+    {
+      "store": "   1",
+      "number": 201,
+      "last_name": "FROM EP",
+      "first_name": "",
+      "type": 4,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 846,
+      "last_name": "GAYE",
+      "first_name": "EBRIMA",
+      "type": 1,
+      "mag_card_id": 7047
+    },
+    {
+      "store": "   1",
+      "number": 80,
+      "last_name": "GEORGE",
+      "first_name": "B",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 105,
+      "last_name": "GILBERT",
+      "first_name": "KAREN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 3,
+      "last_name": "GLYBOVSKY",
+      "first_name": "KATHERINE",
+      "type": 2,
+      "mag_card_id": 1
+    },
+    {
+      "store": "   1",
+      "number": 809,
+      "last_name": "GOMES",
+      "first_name": "CATHY",
+      "type": 1,
+      "mag_card_id": 7010
+    },
+    {
+      "store": "   1",
+      "number": 811,
+      "last_name": "GONSALVES",
+      "first_name": "JOSEPH",
+      "type": 1,
+      "mag_card_id": 7012
+    },
+    {
+      "store": "   1",
+      "number": 7,
+      "last_name": "GRAVINO",
+      "first_name": "BONNIE",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 905,
+      "last_name": "GREBIEN",
+      "first_name": "LAUREEN",
+      "type": 1,
+      "mag_card_id": 7131
+    },
+    {
+      "store": "   1",
+      "number": 2,
+      "last_name": "GREENE",
+      "first_name": "PAM",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 907,
+      "last_name": "GUSTAFSON",
+      "first_name": "LAURIE",
+      "type": 1,
+      "mag_card_id": 7242
+    },
+    {
+      "store": "   1",
+      "number": 54,
+      "last_name": "HANSEN",
+      "first_name": "ANTOINETTE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 66,
+      "last_name": "HATHAWAY",
+      "first_name": "KEVIN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 78,
+      "last_name": "HAUSER WEST",
+      "first_name": "WENDY",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 867,
+      "last_name": "HERNANDEZ",
+      "first_name": "WILLIAM",
+      "type": 1,
+      "mag_card_id": 7169
+    },
+    {
+      "store": "   1",
+      "number": 807,
+      "last_name": "HIGGINS",
+      "first_name": "BARRY",
+      "type": 1,
+      "mag_card_id": 7008
+    },
+    {
+      "store": "   1",
+      "number": 810,
+      "last_name": "HIGSON",
+      "first_name": "LINDA",
+      "type": 1,
+      "mag_card_id": 7011
+    },
+    {
+      "store": "   1",
+      "number": 109,
+      "last_name": "HORTA",
+      "first_name": "SHAWN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 4,
+      "last_name": "ISHERWOOD",
+      "first_name": "LISA",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 825,
+      "last_name": "JACKMAN",
+      "first_name": "DAWN",
+      "type": 1,
+      "mag_card_id": 7231
+    },
+    {
+      "store": "   1",
+      "number": 830,
+      "last_name": "JARBEAU",
+      "first_name": "MICHAEL",
+      "type": 1,
+      "mag_card_id": 7215
+    },
+    {
+      "store": "   1",
+      "number": 881,
+      "last_name": "JEFFERSON",
+      "first_name": "JEAN",
+      "type": 1,
+      "mag_card_id": 7082
+    },
+    {
+      "store": "   1",
+      "number": 1,
+      "last_name": "KAPLAN",
+      "first_name": "JENN",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 801,
+      "last_name": "KENNY",
+      "first_name": "THELMA",
+      "type": 1,
+      "mag_card_id": 7002
+    },
+    {
+      "store": "   1",
+      "number": 879,
+      "last_name": "KENYON",
+      "first_name": "BILL",
+      "type": 1,
+      "mag_card_id": 7080
+    },
+    {
+      "store": "   1",
+      "number": 863,
+      "last_name": "KENYON",
+      "first_name": "JOHN",
+      "type": 1,
+      "mag_card_id": 7190
+    },
+    {
+      "store": "   1",
+      "number": 944,
+      "last_name": "KING",
+      "first_name": "MAUREEN",
+      "type": 1,
+      "mag_card_id": 7202
+    },
+    {
+      "store": "   1",
+      "number": 831,
+      "last_name": "KRAPF",
+      "first_name": "ALFRED",
+      "type": 2,
+      "mag_card_id": 7239
+    },
+    {
+      "store": "   1",
+      "number": 939,
+      "last_name": "KRAPF",
+      "first_name": "MARIANNE",
+      "type": 1,
+      "mag_card_id": 7145
+    },
+    {
+      "store": "   1",
+      "number": 526,
+      "last_name": "KUMAR",
+      "first_name": "ANNE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 955,
+      "last_name": "KUMAR",
+      "first_name": "CHRIS",
+      "type": 1,
+      "mag_card_id": 7178
+    },
+    {
+      "store": "   1",
+      "number": 894,
+      "last_name": "KUMAR",
+      "first_name": "JENNIFER",
+      "type": 1,
+      "mag_card_id": 7139
+    },
+    {
+      "store": "   1",
+      "number": 14,
+      "last_name": "LAPLANTE",
+      "first_name": "JANA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 940,
+      "last_name": "LAPOINTE",
+      "first_name": "ROBERT",
+      "type": 1,
+      "mag_card_id": 7146
+    },
+    {
+      "store": "   1",
+      "number": 818,
+      "last_name": "LAPRADE",
+      "first_name": "LEO",
+      "type": 1,
+      "mag_card_id": 7056
+    },
+    {
+      "store": "   1",
+      "number": 836,
+      "last_name": "LARIVEE",
+      "first_name": "LORI",
+      "type": 1,
+      "mag_card_id": 7241
+    },
+    {
+      "store": "   1",
+      "number": 935,
+      "last_name": "LAURENCE",
+      "first_name": "BETH",
+      "type": 1,
+      "mag_card_id": 7051
+    },
+    {
+      "store": "   1",
+      "number": 63,
+      "last_name": "LEACH",
+      "first_name": "SHERYN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 941,
+      "last_name": "LEONARDO",
+      "first_name": "MARCIA",
+      "type": 1,
+      "mag_card_id": 7147
+    },
+    {
+      "store": "   1",
+      "number": 800,
+      "last_name": "LEVESQUE",
+      "first_name": "LINDA",
+      "type": 1,
+      "mag_card_id": 7001
+    },
+    {
+      "store": "   1",
+      "number": 821,
+      "last_name": "LOISELLE",
+      "first_name": "ANNA",
+      "type": 1,
+      "mag_card_id": 7237
+    },
+    {
+      "store": "   1",
+      "number": 885,
+      "last_name": "LONGTIN",
+      "first_name": "LORI",
+      "type": 1,
+      "mag_card_id": 7212
+    },
+    {
+      "store": "   1",
+      "number": 505,
+      "last_name": "LOWNEY",
+      "first_name": "DANIELLE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 55,
+      "last_name": "LUSIGNAN",
+      "first_name": "JESSICA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 896,
+      "last_name": "MACHADO",
+      "first_name": "ANGEL",
+      "type": 1,
+      "mag_card_id": 7228
+    },
+    {
+      "store": "   1",
+      "number": 827,
+      "last_name": "MACHADO",
+      "first_name": "MICHAEL",
+      "type": 1,
+      "mag_card_id": 7028
+    },
+    {
+      "store": "   1",
+      "number": 874,
+      "last_name": "MACKAY",
+      "first_name": "JUDITH",
+      "type": 1,
+      "mag_card_id": 7075
+    },
+    {
+      "store": "   1",
+      "number": 931,
+      "last_name": "MACLAUGHLIN",
+      "first_name": "MARY",
+      "type": 1,
+      "mag_card_id": 7198
+    },
+    {
+      "store": "   1",
+      "number": 47,
+      "last_name": "MAGLIOLI",
+      "first_name": "CINDY",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 10,
+      "last_name": "MALONEY",
+      "first_name": "CAROL",
+      "type": 2,
+      "mag_card_id": 1201
+    },
+    {
+      "store": "   1",
+      "number": 8,
+      "last_name": "MANAGER",
+      "first_name": "MOLLY",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 956,
+      "last_name": "MANZI",
+      "first_name": "KRISTEN",
+      "type": 1,
+      "mag_card_id": 7179
+    },
+    {
+      "store": "   1",
+      "number": 530,
+      "last_name": "MARTIN",
+      "first_name": "RENEE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 839,
+      "last_name": "MARTINS",
+      "first_name": "THEOPHILUS",
+      "type": 1,
+      "mag_card_id": 7138
+    },
+    {
+      "store": "   1",
+      "number": 855,
+      "last_name": "MCCABE",
+      "first_name": "ELLEN",
+      "type": 1,
+      "mag_card_id": 7233
+    },
+    {
+      "store": "   1",
+      "number": 880,
+      "last_name": "MCCARTHY",
+      "first_name": "JOYCE",
+      "type": 1,
+      "mag_card_id": 7081
+    },
+    {
+      "store": "   1",
+      "number": 957,
+      "last_name": "MCDERMOTT",
+      "first_name": "LAUREN",
+      "type": 1,
+      "mag_card_id": 7042
+    },
+    {
+      "store": "   1",
+      "number": 954,
+      "last_name": "MCGILL",
+      "first_name": "PETER",
+      "type": 1,
+      "mag_card_id": 7247
+    },
+    {
+      "store": "   1",
+      "number": 34,
+      "last_name": "MENNENGA",
+      "first_name": "KRISTINA",
+      "type": 1,
+      "mag_card_id": 1207
+    },
+    {
+      "store": "   1",
+      "number": 57,
+      "last_name": "MIGNANELLI",
+      "first_name": "STEVEN",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 932,
+      "last_name": "MOLINA",
+      "first_name": "GUILLERMO",
+      "type": 1,
+      "mag_card_id": 7036
+    },
+    {
+      "store": "   1",
+      "number": 41,
+      "last_name": "MORGAN",
+      "first_name": "MICHELLE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 816,
+      "last_name": "MORRA",
+      "first_name": "JOSEPH",
+      "type": 1,
+      "mag_card_id": 7166
+    },
+    {
+      "store": "   1",
+      "number": 77,
+      "last_name": "MORSE",
+      "first_name": "LISA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 924,
+      "last_name": "MULHOLLAND",
+      "first_name": "JAMES",
+      "type": 1,
+      "mag_card_id": 7126
+    },
+    {
+      "store": "   1",
+      "number": 946,
+      "last_name": "NGUYEN",
+      "first_name": "HOA",
+      "type": 1,
+      "mag_card_id": 7151
+    },
+    {
+      "store": "   1",
+      "number": 200,
+      "last_name": "NORTH MAIN",
+      "first_name": "FROM",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 111,
+      "last_name": "O'CONNOR",
+      "first_name": "DONNA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 812,
+      "last_name": "OLIVEIRA",
+      "first_name": "ANTONIO",
+      "type": 1,
+      "mag_card_id": 1209
+    },
+    {
+      "store": "   1",
+      "number": 832,
+      "last_name": "OLIVEIRA",
+      "first_name": "PATRICIA",
+      "type": 1,
+      "mag_card_id": 7240
+    },
+    {
+      "store": "   1",
+      "number": 842,
+      "last_name": "OLIVIERA",
+      "first_name": "CARLOS",
+      "type": 1,
+      "mag_card_id": 7043
+    },
+    {
+      "store": "   1",
+      "number": 25,
+      "last_name": "ONEIL",
+      "first_name": "JOANNA(JAC",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 949,
+      "last_name": "OVERWOOD",
+      "first_name": "BRIAN",
+      "type": 1,
+      "mag_card_id": 7172
+    },
+    {
+      "store": "   1",
+      "number": 528,
+      "last_name": "PAGLIARINI",
+      "first_name": "DANIELLE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 518,
+      "last_name": "PAINE",
+      "first_name": "RACHEL",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 808,
+      "last_name": "PALMATEER",
+      "first_name": "THOMAS",
+      "type": 1,
+      "mag_card_id": 7175
+    },
+    {
+      "store": "   1",
+      "number": 50,
+      "last_name": "PALUMBO",
+      "first_name": "KIM",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 52,
+      "last_name": "PANGBURN",
+      "first_name": "BUNNY",
+      "type": 2,
+      "mag_card_id": 1140
+    },
+    {
+      "store": "   1",
+      "number": 819,
+      "last_name": "PAPAGOLOS",
+      "first_name": "JAMES",
+      "type": 1,
+      "mag_card_id": 7057
+    },
+    {
+      "store": "   1",
+      "number": 882,
+      "last_name": "PAQUETTE",
+      "first_name": "ELAINE",
+      "type": 1,
+      "mag_card_id": 7083
+    },
+    {
+      "store": "   1",
+      "number": 960,
+      "last_name": "PAQUETTE",
+      "first_name": "THOMAS",
+      "type": 1,
+      "mag_card_id": 7248
+    },
+    {
+      "store": "   1",
+      "number": 822,
+      "last_name": "PATIN",
+      "first_name": "STEPHANIE",
+      "type": 1,
+      "mag_card_id": 7238
+    },
+    {
+      "store": "   1",
+      "number": 13,
+      "last_name": "PEARSON",
+      "first_name": "DONNA",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 876,
+      "last_name": "PERRELLI",
+      "first_name": "NICHOLAS",
+      "type": 1,
+      "mag_card_id": 7192
+    },
+    {
+      "store": "   1",
+      "number": 861,
+      "last_name": "PRIESTLEY",
+      "first_name": "CARL",
+      "type": 1,
+      "mag_card_id": 7062
+    },
+    {
+      "store": "   1",
+      "number": 961,
+      "last_name": "PRIESTLEY",
+      "first_name": "SCOTT",
+      "type": 1,
+      "mag_card_id": 7250
+    },
+    {
+      "store": "   1",
+      "number": 850,
+      "last_name": "PROPATIER",
+      "first_name": "ANDREW",
+      "type": 1,
+      "mag_card_id": 7018
+    },
+    {
+      "store": "   1",
+      "number": 962,
+      "last_name": "PROULX",
+      "first_name": "JOHN",
+      "type": 1,
+      "mag_card_id": 7251
+    },
+    {
+      "store": "   1",
+      "number": 868,
+      "last_name": "PULIAFICO",
+      "first_name": "JEFFREY",
+      "type": 1,
+      "mag_card_id": 7069
+    },
+    {
+      "store": "   1",
+      "number": 504,
+      "last_name": "QUINN",
+      "first_name": "KRISTIN",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 936,
+      "last_name": "RAIMONDI",
+      "first_name": "DANTE",
+      "type": 1,
+      "mag_card_id": 7142
+    },
+    {
+      "store": "   1",
+      "number": 29,
+      "last_name": "RAPONE",
+      "first_name": "MARY-ELLEN",
+      "type": 3,
+      "mag_card_id": 1195
+    },
+    {
+      "store": "   1",
+      "number": 521,
+      "last_name": "RAPPOPORT",
+      "first_name": "NICOLE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 848,
+      "last_name": "REBOLLO",
+      "first_name": "PATRICIA",
+      "type": 1,
+      "mag_card_id": 7049
+    },
+    {
+      "store": "   1",
+      "number": 36,
+      "last_name": "REGAN",
+      "first_name": "MEGHAN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 951,
+      "last_name": "REPOSE",
+      "first_name": "LYNN",
+      "type": 1,
+      "mag_card_id": 7199
+    },
+    {
+      "store": "   1",
+      "number": 525,
+      "last_name": "REPOSE",
+      "first_name": "LYNNE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 958,
+      "last_name": "RESENDES",
+      "first_name": "NELSON",
+      "type": 1,
+      "mag_card_id": 7195
+    },
+    {
+      "store": "   1",
+      "number": 513,
+      "last_name": "RIANNA",
+      "first_name": "DIANE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 9,
+      "last_name": "RICH",
+      "first_name": "PAULA",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 844,
+      "last_name": "RICHARDSON",
+      "first_name": "JULIE",
+      "type": 1,
+      "mag_card_id": 7016
+    },
+    {
+      "store": "   1",
+      "number": 40,
+      "last_name": "RISK",
+      "first_name": "TAMARA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 48,
+      "last_name": "RIX",
+      "first_name": "KRISTEN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 91,
+      "last_name": "ROLES",
+      "first_name": "KAREN",
+      "type": 1,
+      "mag_card_id": 1205
+    },
+    {
+      "store": "   1",
+      "number": 975,
+      "last_name": "ROOAM",
+      "first_name": "ROOAM",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 829,
+      "last_name": "ROTONDI",
+      "first_name": "URSULA",
+      "type": 1,
+      "mag_card_id": 7093
+    },
+    {
+      "store": "   1",
+      "number": 117,
+      "last_name": "ROTONDI",
+      "first_name": "URSULA",
+      "type": 1,
+      "mag_card_id": 1210
+    },
+    {
+      "store": "   1",
+      "number": 31,
+      "last_name": "RYAN",
+      "first_name": "STEVE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 506,
+      "last_name": "SAGGERSON",
+      "first_name": "MARY",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 39,
+      "last_name": "SCALLON",
+      "first_name": "KAREN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 852,
+      "last_name": "SCALLON",
+      "first_name": "KAREN",
+      "type": 1,
+      "mag_card_id": 7112
+    },
+    {
+      "store": "   1",
+      "number": 820,
+      "last_name": "SCHWARTZ",
+      "first_name": "DOREEN",
+      "type": 1,
+      "mag_card_id": 7021
+    },
+    {
+      "store": "   1",
+      "number": 35,
+      "last_name": "SEDDON",
+      "first_name": "NICKI",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 847,
+      "last_name": "SERBYN",
+      "first_name": "LAURIE",
+      "type": 1,
+      "mag_card_id": 7048
+    },
+    {
+      "store": "   1",
+      "number": 512,
+      "last_name": "SERPA",
+      "first_name": "SHALON",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 101,
+      "last_name": "SERVER 1",
+      "first_name": "SERVER 1",
+      "type": 1,
+      "mag_card_id": 1139
+    },
+    {
+      "store": "   1",
+      "number": 519,
+      "last_name": "SHEA",
+      "first_name": "JENNIFER",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 826,
+      "last_name": "SILVESTRI",
+      "first_name": "SUSAN",
+      "type": 1,
+      "mag_card_id": 7027
+    },
+    {
+      "store": "   1",
+      "number": 222,
+      "last_name": "SIMONE",
+      "first_name": "JOHN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 915,
+      "last_name": "SOLTYS",
+      "first_name": "SHARON",
+      "type": 1,
+      "mag_card_id": 7014
+    },
+    {
+      "store": "   1",
+      "number": 53,
+      "last_name": "SOUSA",
+      "first_name": "CANDACE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 5,
+      "last_name": "SPAGNOLO",
+      "first_name": "ANN",
+      "type": 2,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 26,
+      "last_name": "SPURR",
+      "first_name": "JENNIFER",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 49,
+      "last_name": "SUNDAE",
+      "first_name": "SALLY",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 869,
+      "last_name": "SURPRISE",
+      "first_name": "FRANCKEL",
+      "type": 1,
+      "mag_card_id": 7070
+    },
+    {
+      "store": "   1",
+      "number": 813,
+      "last_name": "SWANSON",
+      "first_name": "KRISTINE",
+      "type": 1,
+      "mag_card_id": 7191
+    },
+    {
+      "store": "   1",
+      "number": 225,
+      "last_name": "SWEET",
+      "first_name": "MICHELLE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 42,
+      "last_name": "SWIFT",
+      "first_name": "ELAINE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 837,
+      "last_name": "TAFT",
+      "first_name": "CLAIRE",
+      "type": 1,
+      "mag_card_id": 7038
+    },
+    {
+      "store": "   1",
+      "number": 45,
+      "last_name": "TART",
+      "first_name": "JEAN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 37,
+      "last_name": "TAVARAS",
+      "first_name": "JAN",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 853,
+      "last_name": "TAVARES",
+      "first_name": "JAN",
+      "type": 1,
+      "mag_card_id": 7095
+    },
+    {
+      "store": "   1",
+      "number": 904,
+      "last_name": "THERRIEN",
+      "first_name": "EDWARD",
+      "type": 1,
+      "mag_card_id": 7055
+    },
+    {
+      "store": "   1",
+      "number": 875,
+      "last_name": "THIBOUTOT",
+      "first_name": "PAULINE",
+      "type": 1,
+      "mag_card_id": 7076
+    },
+    {
+      "store": "   1",
+      "number": 515,
+      "last_name": "THOVMASON",
+      "first_name": "LEAH",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 38,
+      "last_name": "TOPP",
+      "first_name": "LYNN",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 68,
+      "last_name": "TOURTELOTT",
+      "first_name": "CHARLOTTE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 854,
+      "last_name": "TOURTELOTTE",
+      "first_name": "CHARLOTTE",
+      "type": 1,
+      "mag_card_id": 7020
+    },
+    {
+      "store": "   1",
+      "number": 103,
+      "last_name": "TRABUCCO",
+      "first_name": "STEVE",
+      "type": 1,
+      "mag_card_id": 1208
+    },
+    {
+      "store": "   1",
+      "number": 333,
+      "last_name": "TRAIN",
+      "first_name": "TRAIN",
+      "type": 4,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 937,
+      "last_name": "VAN DO",
+      "first_name": "ANH",
+      "type": 1,
+      "mag_card_id": 7143
+    },
+    {
+      "store": "   1",
+      "number": 862,
+      "last_name": "VANASSE",
+      "first_name": "RAYMOND",
+      "type": 1,
+      "mag_card_id": 7063
+    },
+    {
+      "store": "   1",
+      "number": 901,
+      "last_name": "VEIRRA",
+      "first_name": "ROSE",
+      "type": 1,
+      "mag_card_id": 7096
+    },
+    {
+      "store": "   1",
+      "number": 511,
+      "last_name": "VENGEROW",
+      "first_name": "STEPHANIE",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 845,
+      "last_name": "VIERA",
+      "first_name": "NANCY",
+      "type": 1,
+      "mag_card_id": 7046
+    },
+    {
+      "store": "   1",
+      "number": 12,
+      "last_name": "VIERA",
+      "first_name": "ROSE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 46,
+      "last_name": "WAGONER-ACETO",
+      "first_name": "JULIE",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 803,
+      "last_name": "WHITE",
+      "first_name": "BERNARD",
+      "type": 1,
+      "mag_card_id": 7004
+    },
+    {
+      "store": "   1",
+      "number": 17,
+      "last_name": "WHORF",
+      "first_name": "ALYSSA",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 27,
+      "last_name": "WHORF",
+      "first_name": "MARCEY",
+      "type": 3,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 95,
+      "last_name": "WINDE",
+      "first_name": "BETTY",
+      "type": 1,
+      "mag_card_id": 0
+    }
+  ],
+  "tables": [],
+  "order_types": []
+}

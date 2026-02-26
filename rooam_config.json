@@ -1,0 +1,22 @@
+{
+  "location": {
+    "name": "My Test Restaurant",
+    "country": "US",
+    "address1": "123 Main St",
+    "city": "Springfield",
+    "state": "IL",
+    "zip": "62701"
+  },
+  "rooam": {
+    "tender_id": "test-tender-id",
+    "employee_id": "test-employee-id"
+  },
+  "positouch": {
+    "spcwin_path": "C:\\SC\\SPCWIN.ini"
+  },
+  "cloud": {
+	"enabled": true,
+	"endpoint": "https://positouch-cloud-server-production.up.railway.app/api/v1/pos-data",
+	"api_key": "THIS_IS_THE_MOSTEST_SECRET_THING"
+}
+}

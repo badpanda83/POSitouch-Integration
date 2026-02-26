@@ -21,6 +21,7 @@ const (
 )
 
 func main() {
+	// --- Updated for config compatibility ---
 	configPath := flag.String("config", config.DefaultConfigPath, "path to rooam_config.json")
 	flag.Parse()
 
@@ -41,8 +42,9 @@ func main() {
 	log.Printf("[main] install dir : %s", cfg.InstallDir)
 	log.Printf("[main] SC dir      : %s", cfg.SCDir)
 	log.Printf("[main] DBF dir     : %s", cfg.DBFDir)
-	log.Printf("[main] ALTDBF dir  : %s", cfg.AltDBFDir)
+	log.Printf("[main] ALTDBF dir  : %s", cfg.AltDBFDir) // Note: matches Config struct field
 
+	// --- Updated: pass correct directory for cache file ---
 	c := cache.New(cfg.InstallDir)
 	a := agent.New(cfg, c)
 

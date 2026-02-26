@@ -1,85 +1,98 @@
-// Package config reads the rooam_config.json file produced by the Rooam installer.
 package config
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path/filepath"
+    "encoding/json"
+    "fmt"
+    "os"
+    "path/filepath"
 )
 
-// Location holds venue location metadata from the config file.
+// ----- Default config path constant -----
+const DefaultConfigPath = "rooam_config.json" // Or whatever default you want
+
+// ----- Location definition -----
 type Location struct {
-	Name    string `json:"name"`
-	Country string `json:"country"`
-	Address1 string `json:"address1"`
-	Address2 string `json:"address2"`
-	City    string `json:"city"`
-	State   string `json:"state"`
-	Zip     string `json:"zip"`
-	Email   string `json:"email"`
-	Phone   string `json:"phone"`
+    Name     string `json:"name"`
+    Country  string `json:"country"`
+    Address1 string `json:"address1"`
+    Address2 string `json:"address2"`
+    City     string `json:"city"`
+    State    string `json:"state"`
+    Zip      string `json:"zip"`
+    Email    string `json:"email"`
+    Phone    string `json:"phone"`
 }
 
-// Rooam holds Rooam-specific settings.
+// ----- Rooam-specific fields -----
 type Rooam struct {
-	TenderID   string `json:"tender_id"`
-	EmployeeID string `json:"employee_id"`
+    TenderID   string `json:"tender_id"`
+    EmployeeID string `json:"employee_id"`
 }
 
-// POSitouch holds POSitouch-specific settings.
+// ----- POSitouch fields -----
 type POSitouch struct {
-	SpcwinPath     string `json:"spcwin_path"`
-	VirtualSection string `json:"virtual_section"`
-	XMLSection     string `json:"xml_section"`
+    SpcwinPath     string `json:"spcwin_path"`
+    VirtualSection string `json:"virtual_section"`
+    XMLSection     string `json:"xml_section"`
 }
 
-// Config is the top-level structure of rooam_config.json.
+// ----- Cloud config -----
+type CloudConfig struct {
+    Enabled  bool   `json:"enabled"`
+    Endpoint string `json:"endpoint"`
+    APIKey   string `json:"api_key"`
+}
+
+// ----- Top-level Config -----
 type Config struct {
-	Location  Location  `json:"location"`
-	Rooam     Rooam     `json:"rooam"`
-	POSitouch POSitouch `json:"positouch"`
+    Location   Location    `json:"location"`
+    Rooam      Rooam       `json:"rooam"`
+    POSitouch  POSitouch   `json:"positouch"`
+    Cloud      CloudConfig `json:"cloud"`
 
-	// Derived paths — populated by Load, not read from JSON.
-	InstallDir string `json:"-"`
-	SCDir      string `json:"-"`
-	DBFDir     string `json:"-"`
-	AltDBFDir  string `json:"-"`
+    // Derived/extra fields for agent.go & main.go compatibility
+    SCDir      string
+    SCPath     string
+    DBFDir     string
+    DBFPath    string
+    ALTDBFDir  string
+    ALTDBFPath string
+    AltDBFDir  string    // (CamelCase for main.go compatibility)
+    InstallDir string    // Directory containing config file
 }
 
-// DefaultConfigPath is the default location of rooam_config.json on Windows.
-const DefaultConfigPath = `C:\Program Files\Rooam\POSitouch\rooam_config.json`
+// Load reads the config JSON file and computes the paths used by the agent.
+func Load(path string) (*Config, error) {
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, fmt.Errorf("config: read %q: %w", path, err)
+    }
 
-// Load reads and parses rooam_config.json from the given file path and derives
-// the POSitouch directory paths from the spcwin_path field.
-func Load(configPath string) (*Config, error) {
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, fmt.Errorf("config: reading %s: %w", configPath, err)
-	}
+    var cfg Config
+    if err := json.Unmarshal(data, &cfg); err != nil {
+        return nil, fmt.Errorf("config: parse %q: %w", path, err)
+    }
 
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("config: parsing %s: %w", configPath, err)
-	}
+    if cfg.POSitouch.SpcwinPath == "" {
+        return nil, fmt.Errorf("config: positouch.spcwin_path is empty")
+    }
 
-	cfg.InstallDir = filepath.Dir(configPath)
-	cfg.derivePaths()
-	return &cfg, nil
-}
+    // SC directory = directory where SPCWIN.ini lives
+    scDir := filepath.Dir(cfg.POSitouch.SpcwinPath)
+    parentDir := filepath.Dir(scDir)
+    dbfDir := filepath.Join(parentDir, "DBF")
+    altdbfDir := filepath.Join(parentDir, "ALTDBF")
 
-// derivePaths sets SCDir, DBFDir, and AltDBFDir from the spcwin_path field.
-// e.g. spcwin_path = "C:\SC\SPCWIN.ini"  →  drive = "C:"
-//
-//	SCDir    = "C:\SC"
-//	DBFDir   = "C:\DBF"
-//	AltDBFDir= "C:\ALTDBF"
-func (c *Config) derivePaths() {
-	if c.POSitouch.SpcwinPath == "" {
-		return
-	}
-	c.SCDir = filepath.Dir(c.POSitouch.SpcwinPath)
-	drive := filepath.VolumeName(c.SCDir)
-	c.DBFDir = filepath.Join(drive+string(filepath.Separator), "DBF")
-	c.AltDBFDir = filepath.Join(drive+string(filepath.Separator), "ALTDBF")
+    cfg.SCPath     = scDir + string(filepath.Separator)
+    cfg.SCDir      = cfg.SCPath
+    cfg.DBFPath    = dbfDir + string(filepath.Separator)
+    cfg.DBFDir     = cfg.DBFPath
+    cfg.ALTDBFPath = altdbfDir + string(filepath.Separator)
+    cfg.ALTDBFDir  = cfg.ALTDBFPath
+    cfg.AltDBFDir  = cfg.ALTDBFDir // Set AltDBFDir for compatibility with main.go
+
+    // Set InstallDir for main.go compatibility
+    cfg.InstallDir = filepath.Dir(path)
+
+    return &cfg, nil
 }

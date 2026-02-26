@@ -9,6 +9,7 @@ import (
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
+	"github.com/badpanda83/POSitouch-Integration/cloud" // <-- Add this import!
 )
 
 // RefreshInterval is the time between successive data pulls.
@@ -107,6 +108,22 @@ func (a *Agent) refresh() {
 		log.Printf("[agent] cache updated — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d",
 			len(d.CostCenters), len(d.Tenders), len(d.Employees), len(d.Tables), len(d.OrderTypes))
 	}
+
+	// ----------- CLOUD SYNC ADDITION STARTS HERE -----------
+	if a.cfg.Cloud.Enabled {
+		cloudClient := cloud.NewClient(
+			a.cfg.Cloud.Endpoint,
+			a.cfg.Cloud.APIKey,
+			a.cfg.Location.Name,
+		)
+		err := cloudClient.SyncCache(d)
+		if err != nil {
+			log.Printf("[agent] WARNING: cloud sync failed: %v", err)
+		} else {
+			log.Printf("[agent] cloud sync succeeded.")
+		}
+	}
+	// ----------- CLOUD SYNC ADDITION ENDS HERE -----------
 }
 
 func emptyIfNil[T any](s []T) []T {
