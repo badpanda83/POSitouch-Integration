@@ -1,5 +1,5 @@
 // POSitouch Integration Agent — reads POSitouch DBF files every 30 minutes,
-// caches the data in memory, and persists it to rooam_cache.json.
+// caches the data in memory, and exposes it via REST endpoints.
 package main
 
 import (
@@ -24,7 +24,7 @@ const (
 	appVersion = "1.0.0"
 )
 
-// Simple in-memory store for cache data by location.
+// In-memory store for demonstration; production should use persistent storage.
 var store = struct {
 	data map[string]cache.Data
 }{
@@ -57,9 +57,12 @@ func main() {
 	c := cache.New(cfg.InstallDir)
 	a := agent.New(cfg, c)
 
-	// PUT/POST endpoint to receive agent sync payloads and store by location
+	// ---- REST API Handlers ----
+
+	// PUT/POST: Agent uploads cache for a location.
 	http.HandleFunc("/api/v1/pos-data", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut || r.Method == http.MethodPost {
+		switch r.Method {
+		case http.MethodPut, http.MethodPost:
 			location := r.Header.Get("X-Location-ID")
 			if location == "" {
 				http.Error(w, "Missing X-Location-ID header", http.StatusBadRequest)
@@ -75,29 +78,32 @@ func main() {
 				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes))
 			w.WriteHeader(http.StatusOK)
 			return
-		}
-		// GET /api/v1/pos-data returns a list of locations and timestamps
-		if r.Method == http.MethodGet {
+
+		case http.MethodGet:
+			// List all locations and received_at timestamps.
 			locations := make([]map[string]interface{}, 0, len(store.data))
 			for id := range store.data {
 				locations = append(locations, map[string]interface{}{
 					"location":    id,
-					"received_at": time.Now().UTC(), // For demo, real server: track upload time
+					"received_at": time.Now().UTC(), // Demo: use real timestamp if needed
 				})
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(locations)
 			return
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
 		}
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
-	// Entity endpoints: GET /api/v1/pos-data/{location}/{entity}
+	// GET: Retrieve all/cache entities for a location or a specific entity.
 	http.HandleFunc("/api/v1/pos-data/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
 		parts := strings.SplitN(path, "/", 2)
-		if len(parts) == 1 {
-			// GET /api/v1/pos-data/{location} returns all cached data for that location
+		if len(parts) == 1 && parts[0] != "" {
+			// GET /api/v1/pos-data/{location}
 			locationID := parts[0]
 			d, ok := store.data[locationID]
 			if !ok {
@@ -117,6 +123,7 @@ func main() {
 		http.Error(w, "Bad path", http.StatusBadRequest)
 	})
 
+	// Health check endpoint.
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -141,7 +148,7 @@ func main() {
 	log.Println("[main] Agent stopped")
 }
 
-// Handler for entity endpoints e.g. /api/v1/pos-data/My%20Test%20Restaurant/employees
+// Handler for entity endpoints: GET /api/v1/pos-data/{location}/{entity}
 func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity string) {
 	d, ok := store.data[locationID]
 	if !ok {
