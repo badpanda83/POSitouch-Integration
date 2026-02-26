@@ -1,67 +1,74 @@
+// employees.go reads employee data from USERS.DBF with optional enrichment
+// from EMPFILE.DBF. SSN/SOC_SEC fields are intentionally never read.
 package positouch
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/badpanda83/POSitouch-Integration/dbf"
 )
 
-// socSecField is the EMPFILE.DBF field that must never be cached.
-const socSecField = "SOC_SEC"
+// Employee represents a single POSitouch employee.
+type Employee struct {
+	Store     string `json:"store"`
+	Number    int    `json:"number"`
+	LastName  string `json:"last_name"`
+	FirstName string `json:"first_name"`
+	Type      int    `json:"type"`
+	MagCardID int    `json:"mag_card_id"`
+	Status    string `json:"status,omitempty"` // from EMPFILE if available
+}
 
-// ReadEmployees reads employee records from USERS.DBF and, if present,
-// EMPFILE.DBF in dbfDir. Records from EMPFILE.DBF are merged by employee
-// number, and the SOC_SEC field is always dropped for security.
-func ReadEmployees(dbfDir string) ([]map[string]interface{}, error) {
+// ReadEmployees reads employees from USERS.DBF in dbfDir and optionally
+// enriches the records with status data from EMPFILE.DBF in scDir.
+// SSN fields are intentionally never read or stored for security.
+func ReadEmployees(dbfDir, scDir string) ([]Employee, error) {
 	usersPath := filepath.Join(dbfDir, "USERS.DBF")
-	users, err := dbf.ReadFile(usersPath)
+	records, err := dbf.ReadFile(usersPath)
 	if err != nil {
-		log.Printf("[positouch] USERS.DBF not found (%v), skipping employees", err)
-		return nil, nil
+		return nil, fmt.Errorf("positouch: read USERS.DBF: %w", err)
 	}
-	log.Printf("[positouch] read %d user(s) from USERS.DBF", len(users))
+	log.Printf("[positouch] read %d user(s) from USERS.DBF", len(records))
 
-	// Build a lookup from USER_NBR → USERS record for merging.
-	userMap := make(map[float64]map[string]interface{}, len(users))
-	for _, u := range users {
-		if nbr, ok := u["USER_NBR"].(float64); ok {
-			userMap[nbr] = u
-		}
+	employees := make([]Employee, 0, len(records))
+	for _, rec := range records {
+		employees = append(employees, Employee{
+			Store:     stringField(rec, "STORE"),
+			Number:    int(floatField(rec, "USER_NBR")),
+			LastName:  stringField(rec, "NAME_LAST"),
+			FirstName: stringField(rec, "NAME_FIRST"),
+			Type:      int(floatField(rec, "TYPE")),
+			MagCardID: int(floatField(rec, "MAGCARD_ID")),
+		})
 	}
 
-	// Attempt to read the extended employee file.
-	empPath := filepath.Join(dbfDir, "EMPFILE.DBF")
+	// Optionally enrich from EMPFILE.DBF (try scDir first, then dbfDir).
+	empPath := filepath.Join(scDir, "EMPFILE.DBF")
+	if _, err := os.Stat(empPath); err != nil {
+		empPath = filepath.Join(dbfDir, "EMPFILE.DBF")
+	}
 	empRecords, empErr := dbf.ReadFile(empPath)
 	if empErr != nil {
 		log.Printf("[positouch] EMPFILE.DBF not found (%v), using USERS.DBF only", empErr)
-		return users, nil
+		return employees, nil
 	}
 	log.Printf("[positouch] read %d record(s) from EMPFILE.DBF", len(empRecords))
 
-	// Merge EMPFILE data into the USERS records, dropping SOC_SEC.
-	for _, emp := range empRecords {
-		// Drop the social security field before any processing.
-		delete(emp, socSecField)
-
-		empNum, ok := emp["EMP_NUMBER"].(float64)
-		if !ok {
-			continue
-		}
-		if existing, found := userMap[empNum]; found {
-			for k, v := range emp {
-				existing[k] = v
-			}
-		} else {
-			userMap[empNum] = emp
-		}
+	// Build a lookup from EMP_NUMBER → status, intentionally skipping SOC_SEC.
+	statusByNum := make(map[int]string, len(empRecords))
+	for _, rec := range empRecords {
+		empNum := int(floatField(rec, "EMP_NUMBER"))
+		// EMP_STATUS: F=Active, I=Inactive — never read SOC_SEC
+		statusByNum[empNum] = stringField(rec, "EMP_STATUS")
 	}
 
-	// Collect merged results.
-	result := make([]map[string]interface{}, 0, len(userMap))
-	for _, rec := range userMap {
-		delete(rec, socSecField) // ensure it is absent after merge
-		result = append(result, rec)
+	for i := range employees {
+		if status, ok := statusByNum[employees[i].Number]; ok {
+			employees[i].Status = status
+		}
 	}
-	return result, nil
+	return employees, nil
 }

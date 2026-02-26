@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -62,13 +63,15 @@ func readFromReader(r io.ReadSeeker) ([]map[string]interface{}, error) {
 		}
 		// Field name is null-terminated within the first 11 bytes.
 		nameBytes := desc[0:11]
-		nullIdx := strings.IndexByte(string(nameBytes), 0)
-		name := string(nameBytes)
-		if nullIdx >= 0 {
-			name = string(nameBytes[:nullIdx])
+		nameEnd := 11
+		for j := 0; j < 11; j++ {
+			if nameBytes[j] == 0 {
+				nameEnd = j
+				break
+			}
 		}
 		fields = append(fields, fieldDescriptor{
-			Name:     strings.TrimRight(name, "\x00"),
+			Name:     strings.TrimRight(string(nameBytes[:nameEnd]), " \x00"),
 			Type:     desc[11],
 			Length:   desc[16],
 			Decimals: desc[17],
@@ -117,19 +120,29 @@ func parseField(fd fieldDescriptor, raw string) interface{} {
 		return strings.TrimRight(raw, " ")
 	case 'N':
 		trimmed := strings.TrimSpace(raw)
-		if trimmed == "" {
+		if trimmed == "" || trimmed == "." {
 			return float64(0)
 		}
 		v, err := strconv.ParseFloat(trimmed, 64)
 		if err != nil {
 			return float64(0)
 		}
+		if fd.Decimals == 0 {
+			return math.Trunc(v)
+		}
 		return v
 	case 'D':
-		return strings.TrimSpace(raw)
+		trimmed := strings.TrimSpace(raw)
+		if len(trimmed) == 8 {
+			// Return as ISO-style string YYYY-MM-DD
+			return trimmed[:4] + "-" + trimmed[4:6] + "-" + trimmed[6:8]
+		}
+		return trimmed
 	case 'L':
+		// Standard DBF values are T/Y (true) and F/N (false).
+		// '1' is accepted as truthy to accommodate non-standard POSitouch exports.
 		switch strings.ToUpper(strings.TrimSpace(raw)) {
-		case "T", "Y":
+		case "T", "Y", "1":
 			return true
 		default:
 			return false
