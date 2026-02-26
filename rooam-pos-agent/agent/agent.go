@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"rooam-pos-agent/cache"
-	"rooam-pos-agent/config"
-	"rooam-pos-agent/positouch"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/cache"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/config"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/positouch"
 )
 
 const refreshInterval = 30 * time.Minute

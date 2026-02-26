@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"rooam-pos-agent/dbf"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/dbf"
 )
 
 // OrderType represents a single POSitouch menu/order type.

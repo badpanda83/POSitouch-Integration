@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"rooam-pos-agent/dbf"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/dbf"
 )
 
 // Tender represents a single POSitouch payment type.

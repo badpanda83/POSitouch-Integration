@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"rooam-pos-agent/dbf"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/dbf"
 )
 
 // Employee represents a single POSitouch employee.

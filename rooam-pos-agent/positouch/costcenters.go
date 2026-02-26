@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"rooam-pos-agent/dbf"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/dbf"
 )
 
 // CostCenter represents a single POSitouch cost center.

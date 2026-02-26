@@ -10,9 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"rooam-pos-agent/agent"
-	"rooam-pos-agent/cache"
-	"rooam-pos-agent/config"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/agent"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/cache"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/config"
 )
 
 const (

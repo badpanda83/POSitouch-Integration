@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"rooam-pos-agent/positouch"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/positouch"
 )
 
 // Data holds all cached POSitouch data.

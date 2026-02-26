@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"rooam-pos-agent/dbf"
+	"github.com/badpanda83/POSitouch-Integration/rooam-pos-agent/dbf"
 )
 
 // Table represents a unique table found in the check header file.
