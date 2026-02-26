@@ -1,0 +1,8 @@
+# Build output
+positouch-agent
+positouch-agent.exe
+*.exe
+
+# Runtime files
+rooam_cache.json
+rooam_agent.log
