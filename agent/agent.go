@@ -65,6 +65,7 @@ func (a *Agent) Stop() {
 // Errors from individual file reads are logged but do not abort the refresh.
 func (a *Agent) refresh() {
 	dbfDir := a.cfg.DBFDir
+	scDir := a.cfg.SCDir
 	log.Printf("[agent] reading DBF files from %s", dbfDir)
 
 	costCenters, err := positouch.ReadCostCenters(dbfDir)
@@ -77,7 +78,7 @@ func (a *Agent) refresh() {
 		log.Printf("[agent] WARNING: tenders: %v", err)
 	}
 
-	employees, err := positouch.ReadEmployees(dbfDir)
+	employees, err := positouch.ReadEmployees(dbfDir, scDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: employees: %v", err)
 	}
@@ -87,17 +88,17 @@ func (a *Agent) refresh() {
 		log.Printf("[agent] WARNING: tables: %v", err)
 	}
 
-	orderTypes, err := positouch.ReadOrderTypes(dbfDir)
+	orderTypes, err := positouch.ReadOrderTypes(scDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: order types: %v", err)
 	}
 
 	d := cache.Data{
-		CostCenters: nilToEmpty(costCenters),
-		Tenders:     nilToEmpty(tenders),
-		Employees:   nilToEmpty(employees),
-		Tables:      nilToEmpty(tables),
-		OrderTypes:  nilToEmpty(orderTypes),
+		CostCenters: emptyIfNil(costCenters),
+		Tenders:     emptyIfNil(tenders),
+		Employees:   emptyIfNil(employees),
+		Tables:      emptyIfNil(tables),
+		OrderTypes:  emptyIfNil(orderTypes),
 	}
 
 	if err := a.cache.Update(d); err != nil {
@@ -108,11 +109,9 @@ func (a *Agent) refresh() {
 	}
 }
 
-// nilToEmpty returns an empty (non-nil) slice if s is nil, so that JSON
-// serialization produces [] instead of null.
-func nilToEmpty(s []map[string]interface{}) []map[string]interface{} {
+func emptyIfNil[T any](s []T) []T {
 	if s == nil {
-		return []map[string]interface{}{}
+		return []T{}
 	}
 	return s
 }

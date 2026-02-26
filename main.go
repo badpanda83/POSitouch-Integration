@@ -4,6 +4,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -14,18 +15,29 @@ import (
 	"github.com/badpanda83/POSitouch-Integration/config"
 )
 
+const (
+	appName    = "rooam-pos-agent"
+	appVersion = "1.0.0"
+)
+
 func main() {
 	configPath := flag.String("config", config.DefaultConfigPath, "path to rooam_config.json")
 	flag.Parse()
 
 	log.SetFlags(log.LstdFlags | log.LUTC)
-	log.Printf("[main] loading config from %s", *configPath)
+	fmt.Printf("╔══════════════════════════════════════════╗\n")
+	fmt.Printf("║  %s  v%s                    ║\n", appName, appVersion)
+	fmt.Printf("║  POSitouch Integration Agent              ║\n")
+	fmt.Printf("╚══════════════════════════════════════════╝\n\n")
+
+	log.Printf("[main] config path : %s", *configPath)
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("[main] failed to load config: %v", err)
 	}
 
+	log.Printf("[main] location    : %s", cfg.Location.Name)
 	log.Printf("[main] install dir : %s", cfg.InstallDir)
 	log.Printf("[main] SC dir      : %s", cfg.SCDir)
 	log.Printf("[main] DBF dir     : %s", cfg.DBFDir)
@@ -45,5 +57,5 @@ func main() {
 	}()
 
 	a.Start() // blocks until Stop() is called
-	log.Println("[main] goodbye")
+	log.Println("[main] Agent stopped")
 }

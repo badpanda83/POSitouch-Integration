@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
 // CacheFile is the name of the on-disk cache file written to the install directory.
@@ -16,12 +18,12 @@ const CacheFile = "rooam_cache.json"
 
 // Data holds all cached POSitouch data.
 type Data struct {
-	LastUpdated time.Time                `json:"last_updated"`
-	CostCenters []map[string]interface{} `json:"cost_centers"`
-	Tenders     []map[string]interface{} `json:"tenders"`
-	Employees   []map[string]interface{} `json:"employees"`
-	Tables      []map[string]interface{} `json:"tables"`
-	OrderTypes  []map[string]interface{} `json:"order_types"`
+	LastUpdated time.Time              `json:"last_updated"`
+	CostCenters []positouch.CostCenter `json:"cost_centers"`
+	Tenders     []positouch.Tender     `json:"tenders"`
+	Employees   []positouch.Employee   `json:"employees"`
+	Tables      []positouch.Table      `json:"tables"`
+	OrderTypes  []positouch.OrderType  `json:"order_types"`
 }
 
 // Cache is a thread-safe in-memory store backed by a JSON file.
