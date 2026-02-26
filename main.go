@@ -24,13 +24,10 @@ const (
 	appVersion = "1.0.0"
 )
 
-// Dummy store - in production, use the actual store from your server file.
-// Here, we simulate cache for demonstration.
+// Simple in-memory store for cache data by location.
 var store = struct {
-	mu   chan struct{}       // Not strictly correct, for full thread safety use sync.RWMutex
 	data map[string]cache.Data
 }{
-	mu:   make(chan struct{}, 1),
 	data: make(map[string]cache.Data),
 }
 
@@ -60,23 +57,64 @@ func main() {
 	c := cache.New(cfg.InstallDir)
 	a := agent.New(cfg, c)
 
-	// Set up HTTP endpoints to serve REST data
-	http.HandleFunc("/api/v1/pos-data/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
-		if path == "" || strings.Contains(path, "/") == false {
-			// Show all locations or a specific location as before
-			handleGetLocation(w, r)
+	// PUT/POST endpoint to receive agent sync payloads and store by location
+	http.HandleFunc("/api/v1/pos-data", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut || r.Method == http.MethodPost {
+			location := r.Header.Get("X-Location-ID")
+			if location == "" {
+				http.Error(w, "Missing X-Location-ID header", http.StatusBadRequest)
+				return
+			}
+			var data cache.Data
+			if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+				http.Error(w, "Bad data", http.StatusBadRequest)
+				return
+			}
+			store.data[location] = data
+			log.Printf("[server] received data for location %q — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d",
+				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes))
+			w.WriteHeader(http.StatusOK)
 			return
 		}
-
-		parts := strings.SplitN(path, "/", 2)
-		locationID := parts[0]
-		entity := ""
-		if len(parts) == 2 {
-			entity = parts[1]
+		// GET /api/v1/pos-data returns a list of locations and timestamps
+		if r.Method == http.MethodGet {
+			locations := make([]map[string]interface{}, 0, len(store.data))
+			for id := range store.data {
+				locations = append(locations, map[string]interface{}{
+					"location":    id,
+					"received_at": time.Now().UTC(), // For demo, real server: track upload time
+				})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(locations)
+			return
 		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
 
-		handleGetEntity(w, r, locationID, entity)
+	// Entity endpoints: GET /api/v1/pos-data/{location}/{entity}
+	http.HandleFunc("/api/v1/pos-data/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
+		parts := strings.SplitN(path, "/", 2)
+		if len(parts) == 1 {
+			// GET /api/v1/pos-data/{location} returns all cached data for that location
+			locationID := parts[0]
+			d, ok := store.data[locationID]
+			if !ok {
+				http.Error(w, "location not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(d)
+			return
+		}
+		if len(parts) == 2 {
+			locationID := parts[0]
+			entity := parts[1]
+			handleGetEntity(w, r, locationID, entity)
+			return
+		}
+		http.Error(w, "Bad path", http.StatusBadRequest)
 	})
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -103,9 +141,8 @@ func main() {
 	log.Println("[main] Agent stopped")
 }
 
-// Handler for base entity endpoints e.g. /api/v1/pos-data/My%20Test%20Restaurant/employees
+// Handler for entity endpoints e.g. /api/v1/pos-data/My%20Test%20Restaurant/employees
 func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity string) {
-	// Example: store.data is map[string]cache.Data, adjust if you use another struct
 	d, ok := store.data[locationID]
 	if !ok {
 		http.Error(w, "location not found", http.StatusNotFound)
@@ -127,30 +164,4 @@ func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity 
 	default:
 		http.Error(w, "entity not found", http.StatusNotFound)
 	}
-}
-
-// Handler for /api/v1/pos-data or /api/v1/pos-data/{location}
-func handleGetLocation(w http.ResponseWriter, r *http.Request) {
-	// If path is empty, show all available locations and timestamps
-	locationID := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
-	if locationID == "" {
-		locations := make([]map[string]interface{}, 0, len(store.data))
-		for id, loc := range store.data {
-			locations = append(locations, map[string]interface{}{
-				"location":    id,
-				"received_at": time.Now().UTC(), // In real server, use your timestamp
-			})
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(locations)
-		return
-	}
-
-	d, ok := store.data[locationID]
-	if !ok {
-		http.Error(w, "location not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(d)
 }
