@@ -12,9 +12,10 @@ import (
 
 // OrderType represents a single POSitouch menu/order type.
 type OrderType struct {
+	Store      string `json:"store"`
 	MenuNumber int    `json:"menu_number"`
 	Title      string `json:"title"`
-	OrderType  int    `json:"order_type"`
+	FFOrderType int   `json:"order_type"`
 }
 
 // ReadOrderTypes reads order/menu types from MENUS.DBF in scDir.
@@ -33,9 +34,10 @@ func ReadOrderTypes(scDir string) ([]OrderType, error) {
 	orderTypes := make([]OrderType, 0, len(records))
 	for _, rec := range records {
 		orderTypes = append(orderTypes, OrderType{
-			MenuNumber: int(floatField(rec, "MENU_NUM")),
-			Title:      stringField(rec, "MENU_TITLE"),
-			OrderType:  int(floatField(rec, "FF_ORD_T")),
+			Store:       stringField(rec, "STORE"),
+			MenuNumber:  int(floatField(rec, "MENU_NUM")),
+			Title:       stringField(rec, "MENU_TITLE"),
+			FFOrderType: int(floatField(rec, "FF_ORD_T")),
 		})
 	}
 	log.Printf("[positouch] read %d order type(s) from MENUS.DBF", len(orderTypes))

@@ -12,8 +12,9 @@ import (
 
 // Table represents a unique table found in check header data.
 type Table struct {
-	Number     int `json:"number"`
-	CostCenter int `json:"cost_center"`
+	Store      string `json:"store"`
+	Number     int    `json:"number"`
+	CostCenter int    `json:"cost_center"`
 }
 
 // ReadTables reads unique tables from CHKHDR.DBF in dbfDir.
@@ -63,6 +64,7 @@ func deduplicateTables(records []map[string]interface{}, tableField, ccField str
 		}
 		seen[num] = true
 		tables = append(tables, Table{
+			Store:      stringField(rec, "STORE"),
 			Number:     num,
 			CostCenter: int(floatField(rec, ccField)),
 		})
