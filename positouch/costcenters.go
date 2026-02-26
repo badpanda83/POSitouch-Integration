@@ -2,6 +2,8 @@ package positouch
 
 import (
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/badpanda83/POSitouch-Integration/dbf"
 )
@@ -47,17 +49,21 @@ func parseCostCentersFromNames(records []dbf.Record) []CostCenter {
 	out := make([]CostCenter, 0)
 	for _, rec := range records {
 		code := rec.GetString("CODE")
-		if len(code) >= 2 && code[:2] == "CC" {
-			var num int64
-			if len(code) > 2 {
-				num = rec.GetInt("CODE")
-			}
-			out = append(out, CostCenter{
-				Code:  num,
-				Name:  rec.GetString("NAME"),
-				Store: rec.GetString("STORE"),
-			})
+		if len(code) < 2 || strings.ToUpper(code[:2]) != "CC" {
+			continue
 		}
+		var num int64
+		if len(code) > 2 {
+			n, err := strconv.ParseInt(strings.TrimSpace(code[2:]), 10, 64)
+			if err == nil {
+				num = n
+			}
+		}
+		out = append(out, CostCenter{
+			Code:  num,
+			Name:  rec.GetString("NAME"),
+			Store: rec.GetString("STORE"),
+		})
 	}
 	return out
 }
