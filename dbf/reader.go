@@ -139,6 +139,8 @@ func parseField(fd fieldDescriptor, raw string) interface{} {
 		}
 		return trimmed
 	case 'L':
+		// Standard DBF values are T/Y (true) and F/N (false).
+		// '1' is accepted as truthy to accommodate non-standard POSitouch exports.
 		switch strings.ToUpper(strings.TrimSpace(raw)) {
 		case "T", "Y", "1":
 			return true

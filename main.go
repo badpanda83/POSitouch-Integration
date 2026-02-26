@@ -26,8 +26,8 @@ func main() {
 
 	log.SetFlags(log.LstdFlags | log.LUTC)
 	fmt.Printf("╔══════════════════════════════════════════╗\n")
-	fmt.Printf("║  %s  v%s                    ║\n", appName, appVersion)
-	fmt.Printf("║  POSitouch Integration Agent              ║\n")
+	fmt.Printf("║  %-38s║\n", fmt.Sprintf("%s v%s", appName, appVersion))
+	fmt.Printf("║  %-38s║\n", "POSitouch Integration Agent")
 	fmt.Printf("╚══════════════════════════════════════════╝\n\n")
 
 	log.Printf("[main] config path : %s", *configPath)
