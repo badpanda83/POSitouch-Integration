@@ -14,9 +14,11 @@
   "positouch": {
     "spcwin_path": "C:\\SC\\SPCWIN.ini"
   },
+  "xml_dir": "C:\\SC\\XML\\OMNIVORE_OPEN",
+  "xml_close_dir": "C:\\SC\\XML\\OMNIVORE_CLOSE",
   "cloud": {
-	"enabled": true,
-	"endpoint": "https://positouch-cloud-server-production.up.railway.app/api/v1/pos-data",
-	"api_key": "THIS_IS_THE_MOSTEST_SECRET_THING"
-}
+    "enabled": true,
+    "endpoint": "https://positouch-cloud-server-production.up.railway.app/api/v1/pos-data",
+    "api_key": "THIS_IS_THE_MOSTEST_SECRET_THING"
+  }
 }

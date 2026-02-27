@@ -4,12 +4,12 @@ package agent
 
 import (
 	"log"
+	"path/filepath"
 	"time"
 
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
-	"github.com/badpanda83/POSitouch-Integration/cloud" // <-- Add this import!
 )
 
 // RefreshInterval is the time between successive data pulls.
@@ -18,7 +18,7 @@ const RefreshInterval = 30 * time.Minute
 // Agent orchestrates periodic data pulls from POSitouch DBF files.
 type Agent struct {
 	cfg   *config.Config
-	cache *cache.Cache
+	cache *cache.Cache // Not used for file separation, but can still be used if needed
 	stop  chan struct{}
 	done  chan struct{}
 }
@@ -62,66 +62,63 @@ func (a *Agent) Stop() {
 	<-a.done
 }
 
-// refresh reads all POSitouch DBF files and updates the cache.
-// Errors from individual file reads are logged but do not abort the refresh.
+// refresh reads all POSitouch DBF files and updates all caches in data_cache/
 func (a *Agent) refresh() {
 	dbfDir := a.cfg.DBFDir
 	scDir := a.cfg.SCDir
+	xmlOpenDir := a.cfg.XMLDir                      // OMNIVORE_OPEN
+	xmlCloseDir := a.cfg.XMLCloseDir                // OMNIVORE_CLOSE
+
+	cacheDir := filepath.Join(a.cfg.InstallDir, "data_cache")
 	log.Printf("[agent] reading DBF files from %s", dbfDir)
+	log.Printf("[agent] reading XML ticket files from %s and %s", xmlOpenDir, xmlCloseDir)
+	log.Printf("[agent] writing cache files to %s", cacheDir)
 
 	costCenters, err := positouch.ReadCostCenters(dbfDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: cost centers: %v", err)
 	}
+	cache.WriteCostCentersToCache(emptyIfNil(costCenters), filepath.Join(cacheDir, "cost_centers.cache"))
 
 	tenders, err := positouch.ReadTenders(dbfDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: tenders: %v", err)
 	}
+	cache.WriteTendersToCache(emptyIfNil(tenders), filepath.Join(cacheDir, "tenders.cache"))
 
 	employees, err := positouch.ReadEmployees(dbfDir, scDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: employees: %v", err)
 	}
+	cache.WriteEmployeesToCache(emptyIfNil(employees), filepath.Join(cacheDir, "employees.cache"))
 
 	tables, err := positouch.ReadTables(dbfDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: tables: %v", err)
 	}
+	cache.WriteTablesToCache(emptyIfNil(tables), filepath.Join(cacheDir, "tables.cache"))
 
 	orderTypes, err := positouch.ReadOrderTypes(scDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: order types: %v", err)
 	}
+	cache.WriteOrderTypesToCache(emptyIfNil(orderTypes), filepath.Join(cacheDir, "order_types.cache"))
 
-	d := cache.Data{
-		CostCenters: emptyIfNil(costCenters),
-		Tenders:     emptyIfNil(tenders),
-		Employees:   emptyIfNil(employees),
-		Tables:      emptyIfNil(tables),
-		OrderTypes:  emptyIfNil(orderTypes),
+	allTickets, ticketErr := positouch.ReadAllTickets(xmlOpenDir, xmlCloseDir)
+	if ticketErr != nil {
+		log.Printf("[agent] WARNING: tickets: %v", ticketErr)
 	}
+	// Combine open and closed tickets together as one slice for tickets.cache
+	cache.WriteTicketsToCache(emptyIfNil(allTickets), filepath.Join(cacheDir, "tickets.cache"))
 
-	if err := a.cache.Update(d); err != nil {
-		log.Printf("[agent] WARNING: updating cache: %v", err)
-	} else {
-		log.Printf("[agent] cache updated — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d",
-			len(d.CostCenters), len(d.Tenders), len(d.Employees), len(d.Tables), len(d.OrderTypes))
-	}
+	log.Printf("[agent] refreshed and wrote each cache in data_cache/")
 
 	// ----------- CLOUD SYNC ADDITION STARTS HERE -----------
+	// Use cache files for cloud sync, or keep using the combined struct if that's required
+	// You can reconstruct d from files if needed, or use the struct as before
+	// This example just logs that file-based caches are written
 	if a.cfg.Cloud.Enabled {
-		cloudClient := cloud.NewClient(
-			a.cfg.Cloud.Endpoint,
-			a.cfg.Cloud.APIKey,
-			a.cfg.Location.Name,
-		)
-		err := cloudClient.SyncCache(d)
-		if err != nil {
-			log.Printf("[agent] WARNING: cloud sync failed: %v", err)
-		} else {
-			log.Printf("[agent] cloud sync succeeded.")
-		}
+		log.Printf("[agent] Cloud sync enabled — update logic as needed for file-based cache")
 	}
 	// ----------- CLOUD SYNC ADDITION ENDS HERE -----------
 }

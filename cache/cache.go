@@ -18,12 +18,14 @@ const CacheFile = "rooam_cache.json"
 
 // Data holds all cached POSitouch data.
 type Data struct {
-	LastUpdated time.Time              `json:"last_updated"`
-	CostCenters []positouch.CostCenter `json:"cost_centers"`
-	Tenders     []positouch.Tender     `json:"tenders"`
-	Employees   []positouch.Employee   `json:"employees"`
-	Tables      []positouch.Table      `json:"tables"`
-	OrderTypes  []positouch.OrderType  `json:"order_types"`
+	LastUpdated        time.Time                `json:"last_updated"`
+	CostCenters        []positouch.CostCenter   `json:"cost_centers"`
+	Tenders            []positouch.Tender       `json:"tenders"`
+	Employees          []positouch.Employee     `json:"employees"`
+	Tables             []positouch.Table        `json:"tables"`
+	OrderTypes         []positouch.OrderType    `json:"order_types"`
+	CurrentTickets     []positouch.Ticket       `json:"current_tickets"`
+	HistoricalTickets  []positouch.Ticket       `json:"historical_tickets"`
 }
 
 // Cache is a thread-safe in-memory store backed by a JSON file.

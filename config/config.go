@@ -6,10 +6,7 @@ import (
     "os"
     "path/filepath"
 )
-
-// ----- Default config path constant -----
-const DefaultConfigPath = "rooam_config.json" // Or whatever default you want
-
+const DefaultConfigPath = "rooam_config.json"
 // ----- Location definition -----
 type Location struct {
     Name     string `json:"name"`
@@ -45,12 +42,14 @@ type CloudConfig struct {
 
 // ----- Top-level Config -----
 type Config struct {
-    Location   Location    `json:"location"`
-    Rooam      Rooam       `json:"rooam"`
-    POSitouch  POSitouch   `json:"positouch"`
-    Cloud      CloudConfig `json:"cloud"`
+    Location    Location    `json:"location"`
+    Rooam       Rooam       `json:"rooam"`
+    POSitouch   POSitouch   `json:"positouch"`
+    Cloud       CloudConfig `json:"cloud"`
 
-    // Derived/extra fields for agent.go & main.go compatibility
+    XMLDir      string      `json:"xml_dir"`         // open tickets directory
+    XMLCloseDir string      `json:"xml_close_dir"`   // <-- closed tickets directory
+
     SCDir      string
     SCPath     string
     DBFDir     string
@@ -77,7 +76,6 @@ func Load(path string) (*Config, error) {
         return nil, fmt.Errorf("config: positouch.spcwin_path is empty")
     }
 
-    // SC directory = directory where SPCWIN.ini lives
     scDir := filepath.Dir(cfg.POSitouch.SpcwinPath)
     parentDir := filepath.Dir(scDir)
     dbfDir := filepath.Join(parentDir, "DBF")
@@ -89,9 +87,8 @@ func Load(path string) (*Config, error) {
     cfg.DBFDir     = cfg.DBFPath
     cfg.ALTDBFPath = altdbfDir + string(filepath.Separator)
     cfg.ALTDBFDir  = cfg.ALTDBFPath
-    cfg.AltDBFDir  = cfg.ALTDBFDir // Set AltDBFDir for compatibility with main.go
+    cfg.AltDBFDir  = cfg.ALTDBFDir
 
-    // Set InstallDir for main.go compatibility
     cfg.InstallDir = filepath.Dir(path)
 
     return &cfg, nil
