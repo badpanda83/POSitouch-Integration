@@ -23,6 +23,7 @@ const (
 	appName      = "rooam-pos-agent"
 	appVersion   = "1.0.0"
 	exportDir    = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
+	tablesXML    = "C:\\SC\\set1.xml"
 )
 
 var store = struct {
@@ -64,43 +65,66 @@ func main() {
 	cacheAndUpload := func() {
 		log.Printf("[sync] Refreshing & uploading POSitouch entities for location: %s", locationID)
 		
-		// Refresh all data from DBF/XML on every run
 		costCenters, _ := positouch.ReadCostCenters(cfg.DBFDir)
 		tenders, _ := positouch.ReadTenders(cfg.DBFDir)
 		employees, _ := positouch.ReadEmployees(cfg.DBFDir, cfg.SCDir)
-		tables, _ := positouch.ReadTables(cfg.DBFDir)
+
+		// ------------- TABLES (FROM XML) -------------
+		tables, err := positouch.ParseTablesFromSet1XML(tablesXML)
+		if err != nil {
+			log.Printf("[sync][WARN] Unable to load tables: %v", err)
+			tables = nil
+		} else {
+			log.Printf("[sync] Loaded %d tables from %s", len(tables), tablesXML)
+		}
+
 		orderTypes, _ := positouch.ReadOrderTypes(cfg.SCDir)
 		tickets, _ := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
 
 		// ----------- MENU ITEMS -----------
 		menuXMLPath := exportPath("menu_items.xml")
 		menuItems, _ := positouch.ParseMenuXML(menuXMLPath)
+		if len(menuItems) == 0 {
+			log.Printf("[sync][WARN] No menu items loaded from %s", menuXMLPath)
+		} else {
+			log.Printf("[sync] Loaded %d menu items from %s", len(menuItems), menuXMLPath)
+		}
 
 		// ----------- CATEGORIES -----------
 		catXMLPath := exportPath("menu_categories.xml")
-		categories, _ := positouch.ParseFLDFLAGS(catXMLPath)
+		categories, _ := positouch.ParseMenuCategories(catXMLPath)
+		if len(categories) == 0 {
+			log.Printf("[sync][WARN] No categories loaded from %s", catXMLPath)
+		} else {
+			log.Printf("[sync] Loaded %d categories from %s", len(categories), catXMLPath)
+		}
 
 		// ----------- MODIFIERS (optional/placeholder) -----------
 		modifiers := []positouch.Modifier{}
-		// When you have the modifiers XML: parse into this slice
+		// Uncomment and implement ParseMenuModifiers as needed:
+		// modXMLPath := exportPath("menu_modifiers.xml")
+		// modifiers, _ = positouch.ParseMenuModifiers(modXMLPath)
+		if len(modifiers) == 0 {
+			log.Printf("[sync][INFO] No modifiers loaded (parsing not yet implemented)")
+		} else {
+			log.Printf("[sync] Loaded %d modifiers from XML", len(modifiers))
+		}
 
-		// Update full in-memory cache with latest data
 		d := cache.Data{
-			CostCenters:      costCenters,
-			Tenders:          tenders,
-			Employees:        employees,
-			Tables:           tables,
-			OrderTypes:       orderTypes,
-			CurrentTickets:   tickets,
-			HistoricalTickets: nil, // set if you support this
-			MenuItems:        menuItems,
-			Categories:       categories,
-			Modifiers:        modifiers,
-			LastUpdated:      time.Now(),
+			CostCenters:       costCenters,
+			Tenders:           tenders,
+			Employees:         employees,
+			Tables:            tables,
+			OrderTypes:        orderTypes,
+			CurrentTickets:    tickets,
+			HistoricalTickets: nil,
+			MenuItems:         menuItems,
+			Categories:        categories,
+			Modifiers:         modifiers,
+			LastUpdated:       time.Now(),
 		}
 		c.Update(d)
 
-		// Now always upload freshest cache (including new entities)
 		cached := c.Get()
 		entityMap := map[string]interface{}{
 			"employees":    cached.Employees,
@@ -114,10 +138,12 @@ func main() {
 			"modifiers":    cached.Modifiers,
 		}
 
-		// Debug log: print entity counts immediately before upload
 		for entity, arr := range entityMap {
 			l := countItems(arr)
 			log.Printf("[sync] preparing to upload %d %s", l, entity)
+			if l == 0 {
+				log.Printf("[sync][WARN] Entity %s is EMPTY", entity)
+			}
 		}
 
 		for entity, arr := range entityMap {
@@ -145,19 +171,14 @@ func main() {
 		}
 		log.Printf("[sync] All entities uploaded for location: %s", locationID)
 	}
-
-	// ---- RUN cache & upload ON STARTUP ----
 	cacheAndUpload()
 
-	// ---- PERIODIC cache & upload loop (every 30 minutes) ----
 	go func() {
 		for {
 			time.Sleep(30 * time.Minute)
 			cacheAndUpload()
 		}
 	}()
-
-	// ---- REST API Handlers ----
 
 	http.HandleFunc("/api/v1/pos-data", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -179,10 +200,21 @@ func main() {
 			return
 		case http.MethodGet:
 			locations := make([]map[string]interface{}, 0, len(store.data))
-			for id := range store.data {
+			for id, d := range store.data {
 				locations = append(locations, map[string]interface{}{
 					"location":    id,
 					"received_at": time.Now().UTC(),
+					"summary": map[string]int{
+						"cost_centers": len(d.CostCenters),
+						"tenders":      len(d.Tenders),
+						"employees":    len(d.Employees),
+						"tables":       len(d.Tables),
+						"order_types":  len(d.OrderTypes),
+						"tickets":      len(d.CurrentTickets),
+						"menu_items":   len(d.MenuItems),
+						"categories":   len(d.Categories),
+						"modifiers":    len(d.Modifiers),
+					},
 				})
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -227,7 +259,6 @@ func main() {
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 
-	// ---- BLOCK AND WAIT FOR SHUTDOWN SIGNAL ----
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
@@ -235,12 +266,10 @@ func main() {
 	log.Println("[main] Agent stopped")
 }
 
-// exportPath returns the absolute path for a filename in the exportDir.
 func exportPath(filename string) string {
 	return fmt.Sprintf("%s\\%s", exportDir, filename)
 }
 
-// countItems gives length of a slice or channel for debug reporting.
 func countItems(arr interface{}) int {
 	switch v := arr.(type) {
 	case []interface{}:
@@ -268,14 +297,12 @@ func countItems(arr interface{}) int {
 	}
 }
 
-// Handler for entity endpoints: GET /api/v1/pos-data/{location}/{entity}
 func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity string) {
 	d, ok := store.data[locationID]
 	if !ok {
 		http.Error(w, "location not found", http.StatusNotFound)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	switch entity {
 	case "tables":

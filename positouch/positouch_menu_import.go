@@ -5,47 +5,6 @@ import (
 	"os"
 )
 
-// For categories
-type categoryXML struct {
-	ID          int    `xml:"ID"`
-	Name        string `xml:"Name"`
-	Description string `xml:"Description"`
-	Major       int    `xml:"Major"`
-	Minor       int    `xml:"Minor"`
-}
-
-type categoryDbfXML struct {
-	Categories []categoryXML `xml:"Category"`
-}
-
-// ParseMenuCategories parses your menu_categories.xml into []Category.
-func ParseMenuCategories(filename string) ([]Category, error) {
-	xmlFile, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer xmlFile.Close()
-
-	var dbf categoryDbfXML
-	dec := xml.NewDecoder(xmlFile)
-	if err := dec.Decode(&dbf); err != nil {
-		return nil, err
-	}
-
-	var cats []Category
-	for _, x := range dbf.Categories {
-		cats = append(cats, Category{
-			ID:          x.ID,
-			Name:        x.Name,
-			Description: x.Description,
-			Major:       x.Major,
-			Minor:       x.Minor,
-		})
-	}
-	return cats, nil
-}
-
-// Your MenuItem importer (unchanged):
 type menuItemXML struct {
 	ItemNumber          int     `xml:"ItemNumber"`
 	Description         string  `xml:"Description"`
@@ -72,7 +31,7 @@ type indataDbfXML struct {
 	MenuItems   []menuItemXML `xml:"MenuItem"`
 }
 
-// ParseMenuXML parses the menu XML and returns a slice of canonical MenuItems
+// ParseMenuXML parses the menu XML and returns a slice of canonical MenuItems.
 func ParseMenuXML(filename string) ([]MenuItem, error) {
 	xmlFile, err := os.Open(filename)
 	if err != nil {

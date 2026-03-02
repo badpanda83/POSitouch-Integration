@@ -1,0 +1,27 @@
+<Orders>
+    <NewOrder>
+        <Function>1</Function>
+        <ErrorLevel>2</ErrorLevel>
+        <ReferenceNumber>ws47tabwaz</ReferenceNumber>
+        <Check>
+            <CheckHeader>
+                <TableNumber>999</TableNumber>
+                <CostCenter>1</CostCenter>
+                <ServerNumber>976</ServerNumber>
+                <NumberInParty>1</NumberInParty>
+                <TerminalNumber>1</TerminalNumber>
+            </CheckHeader>
+            <ItemDetail>
+                <ScreenCell>13,42</ScreenCell>
+                <Quantity>1</Quantity>
+                <ItemName>NAME</ItemName>
+            </ItemDetail>
+            <ItemDetail>
+                <ScreenCell>13,44</ScreenCell>
+                <Quantity>1</Quantity>
+                <ItemName>NAME</ItemName>
+                <Memo>TEST-SMITH1</Memo>
+            </ItemDetail>
+        </Check>
+    </NewOrder>
+</Orders>

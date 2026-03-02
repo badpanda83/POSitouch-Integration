@@ -3,7 +3,11 @@
 package agent
 
 import (
+	"bytes"
+	"io"
 	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -18,6 +22,55 @@ const RefreshInterval = 30 * time.Minute
 // ExportDir is where the XML menu and category files are located.
 const ExportDir = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
 
+// --- Robust WExport runner with logging ---
+func runWExportAndCopyForTables() error {
+	// 1. Generate fresh set1.xml using WExport.exe, capturing output for logs
+	cmd := exec.Command(
+		"C:\\SC\\WExport.EXE",
+		"ExportSettings",
+		"C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\wexport_layout_manifest.xml",
+	)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("[WExport] Running export command: %v", cmd.Args)
+	err := cmd.Run()
+	log.Printf("[WExport] STDOUT:\n%s", stdout.String())
+	if stderr.Len() > 0 {
+		log.Printf("[WExport] STDERR:\n%s", stderr.String())
+	}
+	if err != nil {
+		log.Printf("[WExport][ERROR] Exit status: %v", err)
+		return err
+	} else {
+		log.Printf("[WExport][SUCCESS] Export completed successfully.")
+	}
+
+	// 2. Copy set1.xml to Export folder
+	src := "C:\\SC\\set1.xml"
+	dst := "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export\\set1.xml"
+	in, err := os.Open(src)
+	if err != nil {
+		log.Printf("[WExport][ERROR] reading %s: %v", src, err)
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dst)
+	if err != nil {
+		log.Printf("[WExport][ERROR] creating %s: %v", dst, err)
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	if err != nil {
+		log.Printf("[WExport][ERROR] copying set1.xml: %v", err)
+		return err
+	}
+	log.Printf("[WExport] set1.xml copied successfully to %s", dst)
+	return nil
+}
+
 // Agent orchestrates periodic data pulls from POSitouch sources.
 type Agent struct {
 	cfg   *config.Config
@@ -25,6 +78,8 @@ type Agent struct {
 	stop  chan struct{}
 	done  chan struct{}
 }
+
+// ... rest unchanged ...
 
 // New creates a new Agent using the provided configuration and cache.
 func New(cfg *config.Config, c *cache.Cache) *Agent {
@@ -36,8 +91,7 @@ func New(cfg *config.Config, c *cache.Cache) *Agent {
 	}
 }
 
-// Start performs an immediate data pull then schedules subsequent pulls every
-// 30 minutes. It blocks until Stop is called.
+// Start performs an immediate data pull then schedules subsequent pulls every 30 minutes. It blocks until Stop is called.
 func (a *Agent) Start() {
 	defer close(a.done)
 
@@ -96,9 +150,16 @@ func (a *Agent) refresh() {
 	}
 	cache.WriteEmployeesToCache(emptyIfNil(employees), filepath.Join(cacheDir, "employees.cache"))
 
-	tables, err := positouch.ReadTables(dbfDir)
+	// --- Improved: WExport runner logs every detail ---
+	if err := runWExportAndCopyForTables(); err != nil {
+		log.Printf("[agent] ERROR: failed to run WExport/copy set1.xml: %v", err)
+	} else {
+		log.Printf("[agent] set1.xml was regenerated and copied to Export dir successfully.")
+	}
+	tables, err := positouch.ParseTablesFromSet1XML("C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export\\set1.xml")
 	if err != nil {
-		log.Printf("[agent] WARNING: tables: %v", err)
+		log.Printf("[sync][WARN] Unable to load tables: %v", err)
+		tables = nil
 	}
 	cache.WriteTablesToCache(emptyIfNil(tables), filepath.Join(cacheDir, "tables.cache"))
 
@@ -119,6 +180,7 @@ func (a *Agent) refresh() {
 	// ----- MENU ITEMS (from menu_items.xml in ExportDir) -----
 	menuItems := []positouch.MenuItem{}
 	menuXMLPath := filepath.Join(ExportDir, "menu_items.xml")
+	log.Printf("[agent] Attempting to load menu items from: %s", menuXMLPath)
 	menuExport, err := positouch.ParseMenuXML(menuXMLPath)
 	if err != nil {
 		log.Printf("[agent] WARNING: ParseMenuXML (%s): %v", menuXMLPath, err)
@@ -126,19 +188,33 @@ func (a *Agent) refresh() {
 	} else {
 		menuItems = menuExport
 		log.Printf("[agent] Parsed %d menu items from %s", len(menuItems), menuXMLPath)
+		for i, item := range menuItems {
+			if i < 5 {
+				log.Printf("[agent] MenuItem[%d]: %+v", i, item)
+			}
+		}
 	}
 	cache.WriteMenuItemsToCache(emptyIfNil(menuItems), filepath.Join(cacheDir, "menu_items.json"))
 
 	// ----- CATEGORIES (from menu_categories.xml in ExportDir) -----
 	categories := []positouch.Category{}
 	catXMLPath := filepath.Join(ExportDir, "menu_categories.xml")
+	log.Printf("[agent] [DEBUG] Attempting to load categories from: %s", catXMLPath)
 	cats, err := positouch.ParseMenuCategories(catXMLPath)
 	if err != nil {
 		log.Printf("[agent] WARNING: ParseMenuCategories (%s): %v", catXMLPath, err)
 		categories = []positouch.Category{}
 	} else {
 		categories = cats
-		log.Printf("[agent] Parsed %d categories from %s", len(categories), catXMLPath)
+		log.Printf("[agent] [DEBUG] Parsed %d categories from %s", len(categories), catXMLPath)
+		for i, category := range categories {
+			if i < 10 { // Only print first 10 for brevity
+				log.Printf("[agent] [DEBUG] Category[%d]: %+v", i, category)
+			}
+		}
+		if len(categories) > 10 {
+			log.Printf("[agent] [DEBUG] ...and %d more categories.", len(categories)-10)
+		}
 	}
 	cache.WriteCategoriesToCache(emptyIfNil(categories), filepath.Join(cacheDir, "categories.json"))
 
@@ -146,12 +222,18 @@ func (a *Agent) refresh() {
 	modifiers := []positouch.Modifier{}
 	modXMLPath := filepath.Join(ExportDir, "menu_modifiers.xml")
 	if _, err := os.Stat(modXMLPath); err == nil {
+		log.Printf("[agent] Attempting to load modifiers from: %s", modXMLPath)
 		mods, err := positouch.ParseMenuModifiers(modXMLPath)
 		if err != nil {
 			log.Printf("[agent] WARNING: ParseMenuModifiers (%s): %v", modXMLPath, err)
 		} else {
 			modifiers = mods
 			log.Printf("[agent] Parsed %d modifiers from %s", len(modifiers), modXMLPath)
+			for i, mod := range modifiers {
+				if i < 5 {
+					log.Printf("[agent] Modifier[%d]: %+v", i, mod)
+				}
+			}
 		}
 	}
 	cache.WriteModifiersToCache(emptyIfNil(modifiers), filepath.Join(cacheDir, "modifiers.json"))
