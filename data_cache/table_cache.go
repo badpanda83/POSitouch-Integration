@@ -6,11 +6,11 @@ import (
 	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
-func WriteEmployeesToCache(employees []positouch.Employee, path string) error {
+func WriteTablesToCache(tables []positouch.Table, path string) error {
 	f, err := os.Create(path)
 	if err != nil { return err }
 	defer f.Close()
-	return json.NewEncoder(f).Encode(employees)
+	return json.NewEncoder(f).Encode(tables)
 }
 
 func ReadTablesFromCache(path string) ([]Table, error) {

@@ -14,17 +14,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/badpanda83/POSitouch-Integration/agent"
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
+	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
 const (
-	appName    = "rooam-pos-agent"
-	appVersion = "1.0.0"
+	appName      = "rooam-pos-agent"
+	appVersion   = "1.0.0"
+	exportDir    = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
 )
 
-// In-memory store for demonstration; production should use persistent storage.
 var store = struct {
 	data map[string]cache.Data
 }{
@@ -55,11 +55,110 @@ func main() {
 	log.Printf("[main] ALTDBF dir  : %s", cfg.AltDBFDir)
 
 	c := cache.New(cfg.InstallDir)
-	a := agent.New(cfg, c)
+
+	locationID := cfg.Location.Name
+	apiBaseURL := cfg.Cloud.Endpoint
+	apiKey := cfg.Cloud.APIKey
+
+	// --- AUTOMATIC CACHE & UPLOAD FUNCTION ---
+	cacheAndUpload := func() {
+		log.Printf("[sync] Refreshing & uploading POSitouch entities for location: %s", locationID)
+		
+		// Refresh all data from DBF/XML on every run
+		costCenters, _ := positouch.ReadCostCenters(cfg.DBFDir)
+		tenders, _ := positouch.ReadTenders(cfg.DBFDir)
+		employees, _ := positouch.ReadEmployees(cfg.DBFDir, cfg.SCDir)
+		tables, _ := positouch.ReadTables(cfg.DBFDir)
+		orderTypes, _ := positouch.ReadOrderTypes(cfg.SCDir)
+		tickets, _ := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
+
+		// ----------- MENU ITEMS -----------
+		menuXMLPath := exportPath("menu_items.xml")
+		menuItems, _ := positouch.ParseMenuXML(menuXMLPath)
+
+		// ----------- CATEGORIES -----------
+		catXMLPath := exportPath("menu_categories.xml")
+		categories, _ := positouch.ParseFLDFLAGS(catXMLPath)
+
+		// ----------- MODIFIERS (optional/placeholder) -----------
+		modifiers := []positouch.Modifier{}
+		// When you have the modifiers XML: parse into this slice
+
+		// Update full in-memory cache with latest data
+		d := cache.Data{
+			CostCenters:      costCenters,
+			Tenders:          tenders,
+			Employees:        employees,
+			Tables:           tables,
+			OrderTypes:       orderTypes,
+			CurrentTickets:   tickets,
+			HistoricalTickets: nil, // set if you support this
+			MenuItems:        menuItems,
+			Categories:       categories,
+			Modifiers:        modifiers,
+			LastUpdated:      time.Now(),
+		}
+		c.Update(d)
+
+		// Now always upload freshest cache (including new entities)
+		cached := c.Get()
+		entityMap := map[string]interface{}{
+			"employees":    cached.Employees,
+			"tables":       cached.Tables,
+			"tenders":      cached.Tenders,
+			"cost_centers": cached.CostCenters,
+			"order_types":  cached.OrderTypes,
+			"tickets":      cached.CurrentTickets,
+			"menu_items":   cached.MenuItems,
+			"categories":   cached.Categories,
+			"modifiers":    cached.Modifiers,
+		}
+
+		// Debug log: print entity counts immediately before upload
+		for entity, arr := range entityMap {
+			l := countItems(arr)
+			log.Printf("[sync] preparing to upload %d %s", l, entity)
+		}
+
+		for entity, arr := range entityMap {
+			data, err := json.Marshal(arr)
+			if err != nil {
+				log.Printf("[sync] failed to marshal %s: %v", entity, err)
+				continue
+			}
+			url := fmt.Sprintf("%s/%s/%s", apiBaseURL, locationID, entity)
+			req, err := http.NewRequest("PUT", url, strings.NewReader(string(data)))
+			if err != nil {
+				log.Printf("[sync] failed to create request for %s: %v", entity, err)
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+apiKey)
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				log.Printf("[sync] failed to upload %s: %v", entity, err)
+				continue
+			}
+			log.Printf("[sync] uploaded %s, response status: %s", entity, resp.Status)
+			resp.Body.Close()
+		}
+		log.Printf("[sync] All entities uploaded for location: %s", locationID)
+	}
+
+	// ---- RUN cache & upload ON STARTUP ----
+	cacheAndUpload()
+
+	// ---- PERIODIC cache & upload loop (every 30 minutes) ----
+	go func() {
+		for {
+			time.Sleep(30 * time.Minute)
+			cacheAndUpload()
+		}
+	}()
 
 	// ---- REST API Handlers ----
 
-	// PUT/POST: Agent uploads cache for a location.
 	http.HandleFunc("/api/v1/pos-data", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPut, http.MethodPost:
@@ -74,36 +173,31 @@ func main() {
 				return
 			}
 			store.data[location] = data
-			log.Printf("[server] received data for location %q — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d",
-				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes))
+			log.Printf("[server] received data for location %q — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d tickets=%d menu_items=%d categories=%d modifiers=%d",
+				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes), len(data.CurrentTickets), len(data.MenuItems), len(data.Categories), len(data.Modifiers))
 			w.WriteHeader(http.StatusOK)
 			return
-
 		case http.MethodGet:
-			// List all locations and received_at timestamps.
 			locations := make([]map[string]interface{}, 0, len(store.data))
 			for id := range store.data {
 				locations = append(locations, map[string]interface{}{
 					"location":    id,
-					"received_at": time.Now().UTC(), // Demo: use real timestamp if needed
+					"received_at": time.Now().UTC(),
 				})
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(locations)
 			return
-
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 	})
 
-	// GET: Retrieve all/cache entities for a location or a specific entity.
 	http.HandleFunc("/api/v1/pos-data/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
 		parts := strings.SplitN(path, "/", 2)
 		if len(parts) == 1 && parts[0] != "" {
-			// GET /api/v1/pos-data/{location}
 			locationID := parts[0]
 			d, ok := store.data[locationID]
 			if !ok {
@@ -123,7 +217,6 @@ func main() {
 		http.Error(w, "Bad path", http.StatusBadRequest)
 	})
 
-	// Health check endpoint.
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -134,18 +227,45 @@ func main() {
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 
-	// Agent run/shutdown handling
+	// ---- BLOCK AND WAIT FOR SHUTDOWN SIGNAL ----
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		sig := <-sigs
-		log.Printf("[main] received signal %s — shutting down", sig)
-		a.Stop()
-	}()
-
-	a.Start()
+	sig := <-sigs
+	log.Printf("[main] received signal %s — shutting down", sig)
 	log.Println("[main] Agent stopped")
+}
+
+// exportPath returns the absolute path for a filename in the exportDir.
+func exportPath(filename string) string {
+	return fmt.Sprintf("%s\\%s", exportDir, filename)
+}
+
+// countItems gives length of a slice or channel for debug reporting.
+func countItems(arr interface{}) int {
+	switch v := arr.(type) {
+	case []interface{}:
+		return len(v)
+	case []positouch.Employee:
+		return len(v)
+	case []positouch.Table:
+		return len(v)
+	case []positouch.Tender:
+		return len(v)
+	case []positouch.CostCenter:
+		return len(v)
+	case []positouch.OrderType:
+		return len(v)
+	case []positouch.Ticket:
+		return len(v)
+	case []positouch.MenuItem:
+		return len(v)
+	case []positouch.Category:
+		return len(v)
+	case []positouch.Modifier:
+		return len(v)
+	default:
+		return -1
+	}
 }
 
 // Handler for entity endpoints: GET /api/v1/pos-data/{location}/{entity}
@@ -168,6 +288,14 @@ func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity 
 		json.NewEncoder(w).Encode(d.CostCenters)
 	case "order_types":
 		json.NewEncoder(w).Encode(d.OrderTypes)
+	case "tickets":
+		json.NewEncoder(w).Encode(d.CurrentTickets)
+	case "menu_items":
+		json.NewEncoder(w).Encode(d.MenuItems)
+	case "categories":
+		json.NewEncoder(w).Encode(d.Categories)
+	case "modifiers":
+		json.NewEncoder(w).Encode(d.Modifiers)
 	default:
 		http.Error(w, "entity not found", http.StatusNotFound)
 	}

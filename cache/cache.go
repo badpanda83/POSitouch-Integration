@@ -26,6 +26,9 @@ type Data struct {
 	OrderTypes         []positouch.OrderType    `json:"order_types"`
 	CurrentTickets     []positouch.Ticket       `json:"current_tickets"`
 	HistoricalTickets  []positouch.Ticket       `json:"historical_tickets"`
+	MenuItems          []positouch.MenuItem     `json:"menu_items"`
+	Modifiers          []positouch.Modifier     `json:"modifiers"`
+	Categories         []positouch.Category     `json:"categories"`
 }
 
 // Cache is a thread-safe in-memory store backed by a JSON file.
@@ -43,11 +46,9 @@ func New(installDir string) *Cache {
 // Update atomically replaces all cached data and flushes to disk.
 func (c *Cache) Update(d Data) error {
 	d.LastUpdated = time.Now().UTC()
-
 	c.mu.Lock()
 	c.data = d
 	c.mu.Unlock()
-
 	return c.save(d)
 }
 
@@ -69,4 +70,90 @@ func (c *Cache) save(d Data) error {
 		return fmt.Errorf("cache: writing %s: %w", path, err)
 	}
 	return nil
+}
+
+// --------------- DISK CACHE HELPERS FOR ALL ENTITIES ---------------
+
+func WriteCostCentersToCache(costCenters []positouch.CostCenter, path string) error {
+	return writeJSON(costCenters, path)
+}
+func WriteTendersToCache(tenders []positouch.Tender, path string) error {
+	return writeJSON(tenders, path)
+}
+func WriteEmployeesToCache(employees []positouch.Employee, path string) error {
+	return writeJSON(employees, path)
+}
+func WriteTablesToCache(tables []positouch.Table, path string) error {
+	return writeJSON(tables, path)
+}
+func WriteOrderTypesToCache(orderTypes []positouch.OrderType, path string) error {
+	return writeJSON(orderTypes, path)
+}
+func WriteTicketsToCache(tickets []positouch.Ticket, path string) error {
+	return writeJSON(tickets, path)
+}
+func WriteMenuItemsToCache(menuItems []positouch.MenuItem, path string) error {
+	return writeJSON(menuItems, path)
+}
+func WriteModifiersToCache(modifiers []positouch.Modifier, path string) error {
+	return writeJSON(modifiers, path)
+}
+func WriteCategoriesToCache(categories []positouch.Category, path string) error {
+	return writeJSON(categories, path)
+}
+
+func ReadCostCentersFromCache(path string) ([]positouch.CostCenter, error) {
+	var v []positouch.CostCenter
+	return v, readJSON(&v, path)
+}
+func ReadTendersFromCache(path string) ([]positouch.Tender, error) {
+	var v []positouch.Tender
+	return v, readJSON(&v, path)
+}
+func ReadEmployeesFromCache(path string) ([]positouch.Employee, error) {
+	var v []positouch.Employee
+	return v, readJSON(&v, path)
+}
+func ReadTablesFromCache(path string) ([]positouch.Table, error) {
+	var v []positouch.Table
+	return v, readJSON(&v, path)
+}
+func ReadOrderTypesFromCache(path string) ([]positouch.OrderType, error) {
+	var v []positouch.OrderType
+	return v, readJSON(&v, path)
+}
+func ReadTicketsFromCache(path string) ([]positouch.Ticket, error) {
+	var v []positouch.Ticket
+	return v, readJSON(&v, path)
+}
+func ReadMenuItemsFromCache(path string) ([]positouch.MenuItem, error) {
+	var v []positouch.MenuItem
+	return v, readJSON(&v, path)
+}
+func ReadModifiersFromCache(path string) ([]positouch.Modifier, error) {
+	var v []positouch.Modifier
+	return v, readJSON(&v, path)
+}
+func ReadCategoriesFromCache(path string) ([]positouch.Category, error) {
+	var v []positouch.Category
+	return v, readJSON(&v, path)
+}
+
+// --- Utility helpers for disk I/O ---
+
+func writeJSON(v interface{}, path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return json.NewEncoder(f).Encode(v)
+}
+func readJSON(v interface{}, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return json.NewDecoder(f).Decode(v)
 }

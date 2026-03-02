@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-02-27T04:11:47.4088667Z",
+  "last_updated": "2026-03-02T16:25:42.0884264Z",
   "cost_centers": [
     {
       "store": "   1",
@@ -174,19 +174,19 @@
     },
     {
       "store": "   1",
-      "number": 507,
-      "last_name": "ALBANESA",
-      "first_name": "REGINA",
-      "type": 3,
-      "mag_card_id": 1108
-    },
-    {
-      "store": "   1",
       "number": 838,
       "last_name": "ALBANESA",
       "first_name": "REGINA",
       "type": 1,
       "mag_card_id": 7110
+    },
+    {
+      "store": "   1",
+      "number": 507,
+      "last_name": "ALBANESA",
+      "first_name": "REGINA",
+      "type": 3,
+      "mag_card_id": 1108
     },
     {
       "store": "   1",
@@ -254,14 +254,6 @@
     },
     {
       "store": "   1",
-      "number": 24,
-      "last_name": "BACON",
-      "first_name": "BOBBIE",
-      "type": 1,
-      "mag_card_id": 1101
-    },
-    {
-      "store": "   1",
       "number": 930,
       "last_name": "BACON",
       "first_name": "BOBBIE",
@@ -270,11 +262,11 @@
     },
     {
       "store": "   1",
-      "number": 126,
-      "last_name": "BAETZEL",
-      "first_name": "RUTH",
+      "number": 24,
+      "last_name": "BACON",
+      "first_name": "BOBBIE",
       "type": 1,
-      "mag_card_id": 1202
+      "mag_card_id": 1101
     },
     {
       "store": "   1",
@@ -283,6 +275,14 @@
       "first_name": "RUTH",
       "type": 1,
       "mag_card_id": 7123
+    },
+    {
+      "store": "   1",
+      "number": 126,
+      "last_name": "BAETZEL",
+      "first_name": "RUTH",
+      "type": 1,
+      "mag_card_id": 1202
     },
     {
       "store": "   1",
@@ -350,19 +350,19 @@
     },
     {
       "store": "   1",
-      "number": 840,
-      "last_name": "BARRY",
-      "first_name": "LIZBETH",
-      "type": 1,
-      "mag_card_id": 7101
-    },
-    {
-      "store": "   1",
       "number": 73,
       "last_name": "BARRY",
       "first_name": "LIZBETH",
       "type": 1,
       "mag_card_id": 1116
+    },
+    {
+      "store": "   1",
+      "number": 840,
+      "last_name": "BARRY",
+      "first_name": "LIZBETH",
+      "type": 1,
+      "mag_card_id": 7101
     },
     {
       "store": "   1",
@@ -590,19 +590,19 @@
     },
     {
       "store": "   1",
-      "number": 889,
-      "last_name": "DONNELLY",
-      "first_name": "MARY",
-      "type": 1,
-      "mag_card_id": 7092
-    },
-    {
-      "store": "   1",
       "number": 22,
       "last_name": "DONNELLY",
       "first_name": "MARY",
       "type": 1,
       "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 889,
+      "last_name": "DONNELLY",
+      "first_name": "MARY",
+      "type": 1,
+      "mag_card_id": 7092
     },
     {
       "store": "   1",
@@ -670,46 +670,6 @@
     },
     {
       "store": "   1",
-      "number": 72,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
-      "number": 75,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
-      "number": 60,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
-      "number": 74,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
-      "number": 82,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
       "number": 81,
       "last_name": "EMPLOYEE",
       "first_name": "TEST",
@@ -727,14 +687,6 @@
     {
       "store": "   1",
       "number": 67,
-      "last_name": "EMPLOYEE",
-      "first_name": "TEST",
-      "type": 1,
-      "mag_card_id": 0
-    },
-    {
-      "store": "   1",
-      "number": 70,
       "last_name": "EMPLOYEE",
       "first_name": "TEST",
       "type": 1,
@@ -767,6 +719,54 @@
     {
       "store": "   1",
       "number": 79,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 82,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 74,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 60,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 75,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 72,
+      "last_name": "EMPLOYEE",
+      "first_name": "TEST",
+      "type": 1,
+      "mag_card_id": 0
+    },
+    {
+      "store": "   1",
+      "number": 70,
       "last_name": "EMPLOYEE",
       "first_name": "TEST",
       "type": 1,
@@ -2045,9 +2045,191 @@
       "mag_card_id": 0
     }
   ],
-  "tables": [],
-  "order_types": [],
+  "tables": null,
+  "order_types": null,
   "current_tickets": [
+    {
+      "number": 1,
+      "opened_at": "2026-02-26T22:01:19Z",
+      "table": 998,
+      "total": 6.37,
+      "server_name": "JENN KAPLAN",
+      "party_size": 1,
+      "cost_center": 2,
+      "cost_center_name": "DINING ROOM",
+      "items": [
+        {
+          "item_number": 0,
+          "item_name": "",
+          "cell_name": "",
+          "major_name": "",
+          "major_number": 0,
+          "minor_name": "",
+          "minor_number": 0,
+          "screen_number": 0,
+          "cell_number": 0,
+          "full_price": 0,
+          "net_price": 0,
+          "price_level": 0,
+          "send_time": "",
+          "serial_number": 0,
+          "prep_sequence": 0,
+          "prep_sequence_name": "",
+          "split_item": "",
+          "sent_to_prep": "",
+          "new_server": 1,
+          "new_server_name": "JENN KAPLAN"
+        },
+        {
+          "item_number": 405,
+          "item_name": "NAME",
+          "cell_name": "NAME",
+          "major_name": "FOOD OPTIONS",
+          "major_number": 11,
+          "minor_name": "ALL",
+          "minor_number": 1,
+          "screen_number": 13,
+          "cell_number": 42,
+          "full_price": 0,
+          "net_price": 0,
+          "price_level": 1,
+          "send_time": "22:01",
+          "serial_number": 1,
+          "prep_sequence": 0,
+          "prep_sequence_name": "----",
+          "split_item": "N",
+          "sent_to_prep": "Y",
+          "new_server": 0,
+          "new_server_name": "",
+          "option": {
+            "item_number": 406,
+            "item_name": "NAME",
+            "cell_name": "NAME",
+            "memo": "GGGG",
+            "major_name": "FOOD OPTIONS",
+            "major_number": 11,
+            "minor_name": "ALL",
+            "minor_number": 1,
+            "screen_number": 13,
+            "cell_number": 44
+          }
+        },
+        {
+          "item_number": 2,
+          "item_name": "STUFFED MUSHROOM",
+          "cell_name": "STUFFED MUSHROOM",
+          "major_name": "APPETIZERS",
+          "major_number": 5,
+          "minor_name": "ALL",
+          "minor_number": 1,
+          "screen_number": 97,
+          "cell_number": 3,
+          "full_price": 5.95,
+          "net_price": 5.95,
+          "price_level": 1,
+          "send_time": "22:01",
+          "serial_number": 2,
+          "prep_sequence": 1,
+          "prep_sequence_name": "APPS",
+          "split_item": "N",
+          "sent_to_prep": "Y",
+          "new_server": 0,
+          "new_server_name": ""
+        }
+      ],
+      "open": true
+    },
+    {
+      "number": 3,
+      "opened_at": "2026-02-27T12:20:03Z",
+      "table": 995,
+      "total": 7.44,
+      "server_name": "JENN KAPLAN",
+      "party_size": 1,
+      "cost_center": 2,
+      "cost_center_name": "DINING ROOM",
+      "items": [
+        {
+          "item_number": 0,
+          "item_name": "",
+          "cell_name": "",
+          "major_name": "",
+          "major_number": 0,
+          "minor_name": "",
+          "minor_number": 0,
+          "screen_number": 0,
+          "cell_number": 0,
+          "full_price": 0,
+          "net_price": 0,
+          "price_level": 0,
+          "send_time": "",
+          "serial_number": 0,
+          "prep_sequence": 0,
+          "prep_sequence_name": "",
+          "split_item": "",
+          "sent_to_prep": "",
+          "new_server": 1,
+          "new_server_name": "JENN KAPLAN"
+        },
+        {
+          "item_number": 405,
+          "item_name": "NAME",
+          "cell_name": "NAME",
+          "major_name": "FOOD OPTIONS",
+          "major_number": 11,
+          "minor_name": "ALL",
+          "minor_number": 1,
+          "screen_number": 13,
+          "cell_number": 42,
+          "full_price": 0,
+          "net_price": 0,
+          "price_level": 1,
+          "send_time": "12:20",
+          "serial_number": 1,
+          "prep_sequence": 0,
+          "prep_sequence_name": "----",
+          "split_item": "N",
+          "sent_to_prep": "Y",
+          "new_server": 0,
+          "new_server_name": "",
+          "option": {
+            "item_number": 406,
+            "item_name": "NAME",
+            "cell_name": "NAME",
+            "memo": "222",
+            "major_name": "FOOD OPTIONS",
+            "major_number": 11,
+            "minor_name": "ALL",
+            "minor_number": 1,
+            "screen_number": 13,
+            "cell_number": 44
+          }
+        },
+        {
+          "item_number": 3,
+          "item_name": "SALMON",
+          "cell_name": "SALMON",
+          "major_name": "ENTREES",
+          "major_number": 10,
+          "minor_name": "SEAFOOD",
+          "minor_number": 5,
+          "screen_number": 97,
+          "cell_number": 5,
+          "full_price": 6.95,
+          "net_price": 6.95,
+          "price_level": 1,
+          "send_time": "12:20",
+          "serial_number": 2,
+          "prep_sequence": 2,
+          "prep_sequence_name": "ENTREES",
+          "split_item": "N",
+          "sent_to_prep": "Y",
+          "new_server": 0,
+          "new_server_name": ""
+        }
+      ],
+      "open": true
+    },
     {
       "number": 2,
       "opened_at": "2026-02-26T22:05:53Z",
@@ -2320,190 +2502,10 @@
         }
       ],
       "open": true
-    },
-    {
-      "number": 1,
-      "opened_at": "2026-02-26T22:01:19Z",
-      "table": 998,
-      "total": 6.37,
-      "server_name": "JENN KAPLAN",
-      "party_size": 1,
-      "cost_center": 2,
-      "cost_center_name": "DINING ROOM",
-      "items": [
-        {
-          "item_number": 0,
-          "item_name": "",
-          "cell_name": "",
-          "major_name": "",
-          "major_number": 0,
-          "minor_name": "",
-          "minor_number": 0,
-          "screen_number": 0,
-          "cell_number": 0,
-          "full_price": 0,
-          "net_price": 0,
-          "price_level": 0,
-          "send_time": "",
-          "serial_number": 0,
-          "prep_sequence": 0,
-          "prep_sequence_name": "",
-          "split_item": "",
-          "sent_to_prep": "",
-          "new_server": 1,
-          "new_server_name": "JENN KAPLAN"
-        },
-        {
-          "item_number": 405,
-          "item_name": "NAME",
-          "cell_name": "NAME",
-          "major_name": "FOOD OPTIONS",
-          "major_number": 11,
-          "minor_name": "ALL",
-          "minor_number": 1,
-          "screen_number": 13,
-          "cell_number": 42,
-          "full_price": 0,
-          "net_price": 0,
-          "price_level": 1,
-          "send_time": "22:01",
-          "serial_number": 1,
-          "prep_sequence": 0,
-          "prep_sequence_name": "----",
-          "split_item": "N",
-          "sent_to_prep": "Y",
-          "new_server": 0,
-          "new_server_name": "",
-          "option": {
-            "item_number": 406,
-            "item_name": "NAME",
-            "cell_name": "NAME",
-            "memo": "GGGG",
-            "major_name": "FOOD OPTIONS",
-            "major_number": 11,
-            "minor_name": "ALL",
-            "minor_number": 1,
-            "screen_number": 13,
-            "cell_number": 44
-          }
-        },
-        {
-          "item_number": 2,
-          "item_name": "STUFFED MUSHROOM",
-          "cell_name": "STUFFED MUSHROOM",
-          "major_name": "APPETIZERS",
-          "major_number": 5,
-          "minor_name": "ALL",
-          "minor_number": 1,
-          "screen_number": 97,
-          "cell_number": 3,
-          "full_price": 5.95,
-          "net_price": 5.95,
-          "price_level": 1,
-          "send_time": "22:01",
-          "serial_number": 2,
-          "prep_sequence": 1,
-          "prep_sequence_name": "APPS",
-          "split_item": "N",
-          "sent_to_prep": "Y",
-          "new_server": 0,
-          "new_server_name": ""
-        }
-      ],
-      "open": true
     }
   ],
-  "historical_tickets": [
-    {
-      "number": 3,
-      "opened_at": "2026-02-26T22:06:27Z",
-      "table": 996,
-      "total": 6.37,
-      "server_name": "JENN KAPLAN",
-      "party_size": 1,
-      "cost_center": 2,
-      "cost_center_name": "DINING ROOM",
-      "items": [
-        {
-          "item_number": 0,
-          "item_name": "",
-          "cell_name": "",
-          "major_name": "",
-          "major_number": 0,
-          "minor_name": "",
-          "minor_number": 0,
-          "screen_number": 0,
-          "cell_number": 0,
-          "full_price": 0,
-          "net_price": 0,
-          "price_level": 0,
-          "send_time": "",
-          "serial_number": 0,
-          "prep_sequence": 0,
-          "prep_sequence_name": "",
-          "split_item": "",
-          "sent_to_prep": "",
-          "new_server": 1,
-          "new_server_name": "JENN KAPLAN"
-        },
-        {
-          "item_number": 405,
-          "item_name": "NAME",
-          "cell_name": "NAME",
-          "major_name": "FOOD OPTIONS",
-          "major_number": 11,
-          "minor_name": "ALL",
-          "minor_number": 1,
-          "screen_number": 13,
-          "cell_number": 42,
-          "full_price": 0,
-          "net_price": 0,
-          "price_level": 1,
-          "send_time": "22:06",
-          "serial_number": 5,
-          "prep_sequence": 0,
-          "prep_sequence_name": "----",
-          "split_item": "N",
-          "sent_to_prep": "Y",
-          "new_server": 0,
-          "new_server_name": "",
-          "option": {
-            "item_number": 406,
-            "item_name": "NAME",
-            "cell_name": "NAME",
-            "memo": "GG",
-            "major_name": "FOOD OPTIONS",
-            "major_number": 11,
-            "minor_name": "ALL",
-            "minor_number": 1,
-            "screen_number": 13,
-            "cell_number": 44
-          }
-        },
-        {
-          "item_number": 9,
-          "item_name": "POTATO SKINS",
-          "cell_name": "POTATO SKINS",
-          "major_name": "APPETIZERS",
-          "major_number": 5,
-          "minor_name": "ALL",
-          "minor_number": 1,
-          "screen_number": 97,
-          "cell_number": 29,
-          "full_price": 5.95,
-          "net_price": 5.95,
-          "price_level": 1,
-          "send_time": "22:06",
-          "serial_number": 6,
-          "prep_sequence": 1,
-          "prep_sequence_name": "APPS",
-          "split_item": "N",
-          "sent_to_prep": "Y",
-          "new_server": 0,
-          "new_server_name": ""
-        }
-      ],
-      "open": false
-    }
-  ]
+  "historical_tickets": null,
+  "menu_items": null,
+  "modifiers": null,
+  "categories": null
 }

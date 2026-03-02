@@ -19,7 +19,7 @@ type Ticket struct {
 	CostCenter     int        `json:"cost_center"`
 	CostCenterName string     `json:"cost_center_name"`
 	Items          []Item     `json:"items"`
-	Open           bool       `json:"open"` // true = open/check is in open dir, false = closed/check is in closed dir
+	Open           bool       `json:"open"`
 }
 
 // Item represents an item on a ticket/check.
@@ -66,13 +66,11 @@ type OptionDetail struct {
 type OpenChecks struct {
 	XMLName xml.Name `xml:"OpenChecks"`
 	Checks  []Check  `xml:"Check"`
-	// There may be other sections, but we only care about Checks
 }
 
 type CheckFinalization struct {
 	XMLName xml.Name `xml:"CheckFinalization"`
 	Checks  []Check  `xml:"Check"`
-	// There may be other sections, but we only care about Checks
 }
 
 type Check struct {
@@ -90,7 +88,6 @@ type CheckHeader struct {
 	NumberInParty       int     `xml:"NumberInParty"`
 	CostCenter          int     `xml:"CostCenter"`
 	CostCenterName      string  `xml:"CostCenterName"`
-	// Add more if needed from XML samples!
 }
 
 // ItemDetail represents each <ItemDetail>.
@@ -123,7 +120,11 @@ func parseTicketsFromXMLFiles(xmlDir string, open bool) ([]Ticket, error) {
 	filesLower, _ := filepath.Glob(filepath.Join(xmlDir, "*.xml"))
 	files := append(filesUpper, filesLower...)
 
-	log.Printf("[ticket_cache] XML files found: %+v", files)
+	// Only keep summary log for file count
+	// log.Printf("[ticket_cache] XML files found: %+v", files)
+	if len(files) == 0 {
+		log.Printf("[ticket_cache] no XML files found in %s", xmlDir)
+	}
 
 	ticketMap := make(map[int]Ticket)
 
@@ -228,7 +229,7 @@ func ReadAllTickets(openDir, closeDir string) ([]Ticket, error) {
 		allTickets[t.Number] = t
 	}
 	for _, t := range closedTickets {
-		allTickets[t.Number] = t // If same Number, closed wins (latest state)
+		allTickets[t.Number] = t
 	}
 
 	result := []Ticket{}

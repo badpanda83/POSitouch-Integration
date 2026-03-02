@@ -1,5 +1,5 @@
 // Package agent implements the main refresh loop for the POSitouch integration.
-// It reads all POSitouch DBF files every 30 minutes and updates the cache.
+// It reads all POSitouch DBF files (and XML exports) every 30 minutes and updates the cache.
 package agent
 
 import (
@@ -15,10 +15,13 @@ import (
 // RefreshInterval is the time between successive data pulls.
 const RefreshInterval = 30 * time.Minute
 
-// Agent orchestrates periodic data pulls from POSitouch DBF files.
+// ExportDir is where the XML menu and category files are located.
+const ExportDir = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
+
+// Agent orchestrates periodic data pulls from POSitouch sources.
 type Agent struct {
 	cfg   *config.Config
-	cache *cache.Cache // Not used for file separation, but can still be used if needed
+	cache *cache.Cache
 	stop  chan struct{}
 	done  chan struct{}
 }
@@ -62,18 +65,19 @@ func (a *Agent) Stop() {
 	<-a.done
 }
 
-// refresh reads all POSitouch DBF files and updates all caches in data_cache/
+// refresh reads all POSitouch files and updates all caches in data_cache/
 func (a *Agent) refresh() {
 	dbfDir := a.cfg.DBFDir
 	scDir := a.cfg.SCDir
-	xmlOpenDir := a.cfg.XMLDir                      // OMNIVORE_OPEN
-	xmlCloseDir := a.cfg.XMLCloseDir                // OMNIVORE_CLOSE
+	xmlOpenDir := a.cfg.XMLDir
+	xmlCloseDir := a.cfg.XMLCloseDir
 
 	cacheDir := filepath.Join(a.cfg.InstallDir, "data_cache")
 	log.Printf("[agent] reading DBF files from %s", dbfDir)
 	log.Printf("[agent] reading XML ticket files from %s and %s", xmlOpenDir, xmlCloseDir)
 	log.Printf("[agent] writing cache files to %s", cacheDir)
 
+	// ----- Standard DBF-based entities -----
 	costCenters, err := positouch.ReadCostCenters(dbfDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: cost centers: %v", err)
@@ -104,23 +108,76 @@ func (a *Agent) refresh() {
 	}
 	cache.WriteOrderTypesToCache(emptyIfNil(orderTypes), filepath.Join(cacheDir, "order_types.cache"))
 
+	// ----- Tickets -----
 	allTickets, ticketErr := positouch.ReadAllTickets(xmlOpenDir, xmlCloseDir)
 	if ticketErr != nil {
 		log.Printf("[agent] WARNING: tickets: %v", ticketErr)
 	}
-	// Combine open and closed tickets together as one slice for tickets.cache
 	cache.WriteTicketsToCache(emptyIfNil(allTickets), filepath.Join(cacheDir, "tickets.cache"))
+	log.Printf("[agent] OMNIVORE_OPEN: cached %d tickets", len(allTickets))
+
+	// ----- MENU ITEMS (from menu_items.xml in ExportDir) -----
+	menuItems := []positouch.MenuItem{}
+	menuXMLPath := filepath.Join(ExportDir, "menu_items.xml")
+	menuExport, err := positouch.ParseMenuXML(menuXMLPath)
+	if err != nil {
+		log.Printf("[agent] WARNING: ParseMenuXML (%s): %v", menuXMLPath, err)
+		menuItems = []positouch.MenuItem{}
+	} else {
+		menuItems = menuExport
+		log.Printf("[agent] Parsed %d menu items from %s", len(menuItems), menuXMLPath)
+	}
+	cache.WriteMenuItemsToCache(emptyIfNil(menuItems), filepath.Join(cacheDir, "menu_items.json"))
+
+	// ----- CATEGORIES (from menu_categories.xml in ExportDir) -----
+	categories := []positouch.Category{}
+	catXMLPath := filepath.Join(ExportDir, "menu_categories.xml")
+	cats, err := positouch.ParseMenuCategories(catXMLPath)
+	if err != nil {
+		log.Printf("[agent] WARNING: ParseMenuCategories (%s): %v", catXMLPath, err)
+		categories = []positouch.Category{}
+	} else {
+		categories = cats
+		log.Printf("[agent] Parsed %d categories from %s", len(categories), catXMLPath)
+	}
+	cache.WriteCategoriesToCache(emptyIfNil(categories), filepath.Join(cacheDir, "categories.json"))
+
+	// ----- MODIFIERS (from menu_modifiers.xml in ExportDir, if available) -----
+	modifiers := []positouch.Modifier{}
+	modXMLPath := filepath.Join(ExportDir, "menu_modifiers.xml")
+	if _, err := os.Stat(modXMLPath); err == nil {
+		mods, err := positouch.ParseMenuModifiers(modXMLPath)
+		if err != nil {
+			log.Printf("[agent] WARNING: ParseMenuModifiers (%s): %v", modXMLPath, err)
+		} else {
+			modifiers = mods
+			log.Printf("[agent] Parsed %d modifiers from %s", len(modifiers), modXMLPath)
+		}
+	}
+	cache.WriteModifiersToCache(emptyIfNil(modifiers), filepath.Join(cacheDir, "modifiers.json"))
+
+	// ----- Combined cache data object -----
+	allData := cache.Data{
+		LastUpdated:        time.Now().UTC(),
+		CostCenters:        emptyIfNil(costCenters),
+		Tenders:            emptyIfNil(tenders),
+		Employees:          emptyIfNil(employees),
+		Tables:             emptyIfNil(tables),
+		OrderTypes:         emptyIfNil(orderTypes),
+		CurrentTickets:     emptyIfNil(allTickets),
+		HistoricalTickets:  []positouch.Ticket{},
+		MenuItems:          emptyIfNil(menuItems),
+		Modifiers:          emptyIfNil(modifiers),
+		Categories:         emptyIfNil(categories),
+	}
+	a.cache.Update(allData)
 
 	log.Printf("[agent] refreshed and wrote each cache in data_cache/")
 
-	// ----------- CLOUD SYNC ADDITION STARTS HERE -----------
-	// Use cache files for cloud sync, or keep using the combined struct if that's required
-	// You can reconstruct d from files if needed, or use the struct as before
-	// This example just logs that file-based caches are written
+	// ----- CLOUD SYNC OPTIONAL HOOK -----
 	if a.cfg.Cloud.Enabled {
 		log.Printf("[agent] Cloud sync enabled — update logic as needed for file-based cache")
 	}
-	// ----------- CLOUD SYNC ADDITION ENDS HERE -----------
 }
 
 func emptyIfNil[T any](s []T) []T {
