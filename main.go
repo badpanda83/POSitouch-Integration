@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	appName      = "rooam-pos-agent"
-	appVersion   = "1.0.0"
-	exportDir    = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
-	tablesXML    = "C:\\SC\\set1.xml"
+	appName   = "rooam-pos-agent"
+	appVersion = "1.0.0"
+	exportDir  = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
+	tablesXML  = "C:\\SC\\set1.xml"
 )
 
 var store = struct {
@@ -58,13 +58,15 @@ func main() {
 	c := cache.New(cfg.InstallDir)
 
 	locationID := cfg.Location.Name
-	apiBaseURL := cfg.Cloud.Endpoint
+	// FIX: trim any trailing slash from the configured endpoint to prevent
+	// double-slash URLs like ".../pos-data//store1/categories" → 400 Bad Request
+	apiBaseURL := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	apiKey := cfg.Cloud.APIKey
 
 	// --- AUTOMATIC CACHE & UPLOAD FUNCTION ---
 	cacheAndUpload := func() {
 		log.Printf("[sync] Refreshing & uploading POSitouch entities for location: %s", locationID)
-		
+
 		costCenters, _ := positouch.ReadCostCenters(cfg.DBFDir)
 		tenders, _ := positouch.ReadTenders(cfg.DBFDir)
 		employees, _ := positouch.ReadEmployees(cfg.DBFDir, cfg.SCDir)
@@ -152,6 +154,8 @@ func main() {
 				log.Printf("[sync] failed to marshal %s: %v", entity, err)
 				continue
 			}
+			// apiBaseURL already has trailing slash stripped above, so this
+			// always produces: <endpoint>/<locationID>/<entity>  (no double slash)
 			url := fmt.Sprintf("%s/%s/%s", apiBaseURL, locationID, entity)
 			req, err := http.NewRequest("PUT", url, strings.NewReader(string(data)))
 			if err != nil {

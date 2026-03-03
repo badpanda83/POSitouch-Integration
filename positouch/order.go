@@ -1,37 +1,39 @@
-package positouch
+﻿package positouch
 
 import "encoding/xml"
 
-// These structs match the XML ordering requirements
+// These structs match the XML ordering requirements (outbound order creation)
 type Orders struct {
-    XMLName    xml.Name    `xml:"Orders"`
-    NewOrder   *NewOrder   `xml:"NewOrder,omitempty"`
+XMLName  xml.Name  `xml:"Orders"`
+NewOrder *NewOrder `xml:"NewOrder,omitempty"`
 }
 
 type NewOrder struct {
-    Function        int        `xml:"Function"`
-    ErrorLevel      int        `xml:"ErrorLevel"`
-    ReferenceNumber string     `xml:"ReferenceNumber,omitempty"`
-    Check           Check      `xml:"Check"`
+Function        int          `xml:"Function"`
+ErrorLevel      int          `xml:"ErrorLevel"`
+ReferenceNumber string       `xml:"ReferenceNumber,omitempty"`
+Check           *OrderCheck  `xml:"Check"`
 }
 
-type Check struct {
-    CheckHeader  CheckHeader    `xml:"CheckHeader"`
-    ItemDetails  []ItemDetail   `xml:"ItemDetail"`
+type OrderCheck struct {
+CheckHeader  OrderCheckHeader `xml:"CheckHeader"`
+ItemDetails  []OrderItem      `xml:"ItemDetail"`
 }
 
-type CheckHeader struct {
-    TableNumber   string   `xml:"TableNumber"`
-    ServerNumber  string   `xml:"ServerNumber"`
-    // Add more tags as needed (CostCenter, TerminalNumber, etc)
+type OrderCheckHeader struct {
+TableNumber    string `xml:"TableNumber"`
+ServerNumber   string `xml:"ServerNumber"`
+CostCenter     string `xml:"CostCenter,omitempty"`
+TerminalNumber string `xml:"TerminalNumber,omitempty"`
+NumberInParty  int    `xml:"NumberInParty,omitempty"`
 }
 
-type ItemDetail struct {
-    ItemNumber string      `xml:"ItemNumber"`
-    Quantity   int         `xml:"Quantity,omitempty"`
-    Options    []Option    `xml:"Option,omitempty"`             // For modifiers (set modifiers etc.)
+type OrderItem struct {
+ItemNumber string        `xml:"ItemNumber"`
+Quantity   int           `xml:"Quantity,omitempty"`
+Options    []OrderOption `xml:"Option,omitempty"`
 }
 
-type Option struct {
-    ItemNumber string `xml:"ItemNumber"`
+type OrderOption struct {
+ItemNumber string `xml:"ItemNumber"`
 }
