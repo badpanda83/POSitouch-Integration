@@ -1,4 +1,4 @@
-// POSitouch Integration Agent — reads POSitouch DBF files every 30 minutes,
+﻿// POSitouch Integration Agent â€” reads POSitouch DBF files every 30 minutes,
 // caches the data in memory, and exposes it via REST endpoints.
 package main
 
@@ -23,7 +23,7 @@ const (
 	appName   = "rooam-pos-agent"
 	appVersion = "1.0.0"
 	exportDir  = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
-	tablesXML  = "C:\\SC\\set1.xml"
+	tablesXML    = `C:\SC\set1.xml`
 )
 
 var store = struct {
@@ -37,10 +37,10 @@ func main() {
 	flag.Parse()
 
 	log.SetFlags(log.LstdFlags | log.LUTC)
-	fmt.Printf("╔══════════════════════════════════════════╗\n")
-	fmt.Printf("║  %-38s║\n", fmt.Sprintf("%s v%s", appName, appVersion))
-	fmt.Printf("║  %-38s║\n", "POSitouch Integration Agent")
-	fmt.Printf("╚══════════════════════════════════════════╝\n\n")
+	fmt.Printf("â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—\n")
+	fmt.Printf("â•‘  %-38sâ•‘\n", fmt.Sprintf("%s v%s", appName, appVersion))
+	fmt.Printf("â•‘  %-38sâ•‘\n", "POSitouch Integration Agent")
+	fmt.Printf("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n\n")
 
 	log.Printf("[main] config path : %s", *configPath)
 
@@ -59,7 +59,7 @@ func main() {
 
 	locationID := cfg.Location.Name
 	// FIX: trim any trailing slash from the configured endpoint to prevent
-	// double-slash URLs like ".../pos-data//store1/categories" → 400 Bad Request
+	// double-slash URLs like ".../pos-data//store1/categories" â†’ 400 Bad Request
 	apiBaseURL := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	apiKey := cfg.Cloud.APIKey
 
@@ -198,7 +198,7 @@ func main() {
 				return
 			}
 			store.data[location] = data
-			log.Printf("[server] received data for location %q — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d tickets=%d menu_items=%d categories=%d modifiers=%d",
+			log.Printf("[server] received data for location %q â€” cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d tickets=%d menu_items=%d categories=%d modifiers=%d",
 				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes), len(data.CurrentTickets), len(data.MenuItems), len(data.Categories), len(data.Modifiers))
 			w.WriteHeader(http.StatusOK)
 			return
@@ -266,7 +266,7 @@ func main() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
-	log.Printf("[main] received signal %s — shutting down", sig)
+	log.Printf("[main] received signal %s â€” shutting down", sig)
 	log.Println("[main] Agent stopped")
 }
 
@@ -331,3 +331,4 @@ func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity 
 		http.Error(w, "entity not found", http.StatusNotFound)
 	}
 }
+
