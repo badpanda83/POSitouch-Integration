@@ -127,7 +127,7 @@ type Option struct {
 
 // --- Main API handler for Ticket Creation ---
 
-func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
+func CreateTicket(w http.ResponseWriter, r *http.Request, inorderDir string) {
 	var req CreateTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -180,8 +180,7 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 		return
 	}
 
-	outDir := "/SC/ORDERS" // Update to your target XML ingest directory for POS
-	if err := writeOrderXMLAtomically(xmlData, outDir); err != nil {
+	if err := writeOrderXMLAtomically(xmlData, inorderDir); err != nil {
 		http.Error(w, "failed to write order file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
