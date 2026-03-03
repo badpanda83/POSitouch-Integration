@@ -101,15 +101,13 @@ func main() {
 			log.Printf("[sync] Loaded %d categories from %s", len(categories), catXMLPath)
 		}
 
-		// ----------- MODIFIERS (optional/placeholder) -----------
-		modifiers := []positouch.Modifier{}
-		// Uncomment and implement ParseMenuModifiers as needed:
-		// modXMLPath := exportPath("menu_modifiers.xml")
-		// modifiers, _ = positouch.ParseMenuModifiers(modXMLPath)
+		// ----------- MODIFIERS -----------
+		modXMLPath := exportPath("menu_items.xml")
+		modifiers, _ := positouch.ParseMenuModifiers(modXMLPath)
 		if len(modifiers) == 0 {
-			log.Printf("[sync][INFO] No modifiers loaded (parsing not yet implemented)")
+			log.Printf("[sync][WARN] No modifiers loaded from %s", modXMLPath)
 		} else {
-			log.Printf("[sync] Loaded %d modifiers from XML", len(modifiers))
+			log.Printf("[sync] Loaded %d modifiers from %s", len(modifiers), modXMLPath)
 		}
 
 		d := cache.Data{
