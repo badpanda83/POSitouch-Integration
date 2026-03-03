@@ -1,45 +1,42 @@
-// ordertypes.go reads menu/order type definitions from MENUS.DBF in the SC directory.
+﻿// ordertypes.go reads order type definitions from NAMECC.DBF in the DBF directory.
+// In POSitouch, revenue centers (cost centers) double as order types.
 package positouch
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"path/filepath"
+"fmt"
+"log"
+"path/filepath"
 
-	"github.com/badpanda83/POSitouch-Integration/dbf"
+"github.com/badpanda83/POSitouch-Integration/dbf"
 )
 
-// OrderType represents a single POSitouch menu/order type.
+// OrderType represents a single POSitouch order/revenue type.
 type OrderType struct {
-	Store      string `json:"store"`
-	MenuNumber int    `json:"menu_number"`
-	Title      string `json:"title"`
-	FFOrderType int   `json:"order_type"`
+ID    int    `json:"id"`
+Name  string `json:"name"`
 }
 
-// ReadOrderTypes reads order/menu types from MENUS.DBF in scDir.
-// MENUS.DBF is produced by SCRTODBF.EXE and lives in the SC directory.
-func ReadOrderTypes(scDir string) ([]OrderType, error) {
-	path := filepath.Join(scDir, "MENUS.DBF")
-	if _, err := os.Stat(path); err != nil {
-		return nil, fmt.Errorf("positouch: MENUS.DBF not found in %s", scDir)
-	}
+// ReadOrderTypes reads order types from NAMECC.DBF in dbfDir.
+// POSitouch uses revenue centers (cost centers) as order types.
+func ReadOrderTypes(dbfDir string) ([]OrderType, error) {
+path := filepath.Join(dbfDir, "NAMECC.DBF")
+records, err := dbf.ReadFile(path)
+if err != nil {
+return nil, fmt.Errorf("positouch: read NAMECC.DBF: %w", err)
+}
 
-	records, err := dbf.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("positouch: read MENUS.DBF: %w", err)
-	}
-
-	orderTypes := make([]OrderType, 0, len(records))
-	for _, rec := range records {
-		orderTypes = append(orderTypes, OrderType{
-			Store:       stringField(rec, "STORE"),
-			MenuNumber:  int(floatField(rec, "MENU_NUM")),
-			Title:       stringField(rec, "MENU_TITLE"),
-			FFOrderType: int(floatField(rec, "FF_ORD_T")),
-		})
-	}
-	log.Printf("[positouch] read %d order type(s) from MENUS.DBF", len(orderTypes))
-	return orderTypes, nil
+var orderTypes []OrderType
+for _, rec := range records {
+name := stringField(rec, "NAME")
+code := int(floatField(rec, "CODE"))
+if name == "" {
+continue
+}
+orderTypes = append(orderTypes, OrderType{
+ID:   code,
+Name: name,
+})
+}
+log.Printf("[positouch] read %d order type(s) from NAMECC.DBF", len(orderTypes))
+return orderTypes, nil
 }

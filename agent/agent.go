@@ -1,4 +1,4 @@
-// Package agent implements the main refresh loop for the POSitouch integration.
+﻿// Package agent implements the main refresh loop for the POSitouch integration.
 // It reads all POSitouch DBF files (and XML exports) every 30 minutes and updates the cache.
 package agent
 
@@ -95,7 +95,7 @@ func New(cfg *config.Config, c *cache.Cache) *Agent {
 func (a *Agent) Start() {
 	defer close(a.done)
 
-	log.Println("[agent] starting — performing initial data pull")
+	log.Println("[agent] starting â€” performing initial data pull")
 	a.refresh()
 
 	ticker := time.NewTicker(RefreshInterval)
@@ -107,7 +107,7 @@ func (a *Agent) Start() {
 			log.Println("[agent] scheduled refresh triggered")
 			a.refresh()
 		case <-a.stop:
-			log.Println("[agent] shutdown signal received — stopping")
+			log.Println("[agent] shutdown signal received â€” stopping")
 			return
 		}
 	}
@@ -163,7 +163,7 @@ func (a *Agent) refresh() {
 	}
 	cache.WriteTablesToCache(emptyIfNil(tables), filepath.Join(cacheDir, "tables.cache"))
 
-	orderTypes, err := positouch.ReadOrderTypes(scDir)
+	orderTypes, err := positouch.ReadOrderTypes(dbfDir)
 	if err != nil {
 		log.Printf("[agent] WARNING: order types: %v", err)
 	}
@@ -258,7 +258,7 @@ func (a *Agent) refresh() {
 
 	// ----- CLOUD SYNC OPTIONAL HOOK -----
 	if a.cfg.Cloud.Enabled {
-		log.Printf("[agent] Cloud sync enabled — update logic as needed for file-based cache")
+		log.Printf("[agent] Cloud sync enabled â€” update logic as needed for file-based cache")
 	}
 }
 

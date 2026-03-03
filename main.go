@@ -80,7 +80,7 @@ func main() {
 			log.Printf("[sync] Loaded %d tables from %s", len(tables), tablesXML)
 		}
 
-		orderTypes, _ := positouch.ReadOrderTypes(cfg.SCDir)
+		orderTypes, _ := positouch.ReadOrderTypes(cfg.DBFDir)
 		tickets, _ := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
 
 		// ----------- MENU ITEMS -----------
