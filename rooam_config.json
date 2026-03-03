@@ -16,6 +16,7 @@
   },
   "xml_dir": "C:\\SC\\XML\\OMNIVORE_OPEN",
   "xml_close_dir": "C:\\SC\\XML\\OMNIVORE_CLOSE",
+  "xml_inorder_dir": "C:\\SC\\XML\\OMNIVORE_INORDER",
   "cloud": {
     "enabled": true,
     "endpoint": "https://positouch-cloud-server-production.up.railway.app/api/v1/pos-data",

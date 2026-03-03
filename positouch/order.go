@@ -29,11 +29,18 @@ NumberInParty  int    `xml:"NumberInParty,omitempty"`
 }
 
 type OrderItem struct {
-ItemNumber string        `xml:"ItemNumber"`
-Quantity   int           `xml:"Quantity,omitempty"`
-Options    []OrderOption `xml:"Option,omitempty"`
+	ItemNumber string        `xml:"ItemNumber,omitempty"`
+	ScreenCell string        `xml:"ScreenCell,omitempty"`
+	ItemName   string        `xml:"ItemName,omitempty"`
+	Quantity   int           `xml:"Quantity,omitempty"`
+	Memo       string        `xml:"Memo,omitempty"`
+	Options    []OrderOption `xml:"Option,omitempty"`
 }
 
 type OrderOption struct {
-ItemNumber string `xml:"ItemNumber"`
+	ItemNumber string `xml:"ItemNumber,omitempty"`
+	ScreenCell string `xml:"ScreenCell,omitempty"`
+	ItemName   string `xml:"ItemName,omitempty"`
+	Quantity   int    `xml:"Quantity,omitempty"`
+	Memo       string `xml:"Memo,omitempty"`
 }

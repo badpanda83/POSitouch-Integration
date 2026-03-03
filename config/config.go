@@ -47,8 +47,9 @@ type Config struct {
     POSitouch   POSitouch   `json:"positouch"`
     Cloud       CloudConfig `json:"cloud"`
 
-    XMLDir      string      `json:"xml_dir"`         // open tickets directory
-    XMLCloseDir string      `json:"xml_close_dir"`   // <-- closed tickets directory
+    XMLDir         string      `json:"xml_dir"`           // open tickets directory
+    XMLCloseDir    string      `json:"xml_close_dir"`     // closed tickets directory
+    XMLInOrderDir  string      `json:"xml_inorder_dir"`   // inbound order drop directory
 
     SCDir      string
     SCPath     string

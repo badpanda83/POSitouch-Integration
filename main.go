@@ -16,6 +16,7 @@ import (
 
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
+	"github.com/badpanda83/POSitouch-Integration/ordering"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
@@ -254,6 +255,16 @@ func main() {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	xmlInOrderDir := cfg.XMLInOrderDir
+	http.HandleFunc("/api/v1/tickets", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		log.Printf("[orders] incoming order request from %s", r.RemoteAddr)
+		ordering.CreateTicket(w, r, xmlInOrderDir)
 	})
 
 	go func() {
