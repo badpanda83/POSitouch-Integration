@@ -10,8 +10,7 @@ import (
 	"time"
 )
 
-// --- Models for requests ---
-
+// --- Request models ---
 type CreateTicketRequest struct {
 	ReferenceNumber string             `json:"reference_number"`
 	TableNumber     string             `json:"table_number"`
@@ -19,37 +18,41 @@ type CreateTicketRequest struct {
 	ServerNumber    string             `json:"server_number"`
 	TerminalNumber  string             `json:"terminal_number,omitempty"`
 	NumberInParty   int                `json:"number_in_party,omitempty"`
-	Items           []OrderItemRequest `json:"items,omitempty"`
-	CategoryID      string             `json:"category_id,omitempty"` // Optionally assign ticket to a category
+	Items           []OrderItemRequest `json:"items"`
 }
 
 type OrderItemRequest struct {
-	ItemNumber   string              `json:"item_number,omitempty"`   // Menu item ID
-	ScreenCell   string              `json:"screen_cell,omitempty"`   // "screen,cell" reference
-	ItemName     string              `json:"item_name,omitempty"`     // For UI and check labeling
-	Quantity     int                 `json:"quantity,omitempty"`
-	Memo         string              `json:"memo,omitempty"`
-	CategoryID   string              `json:"category_id,omitempty"`   // Menu category
-	Modifiers    []ModifierRequest   `json:"modifiers,omitempty"`     // Item modifiers
+	ItemNumber   string            `json:"item_number"`
+	ScreenCell   string            `json:"screen_cell,omitempty"`
+	ItemName     string            `json:"item_name,omitempty"`
+	Quantity     int               `json:"quantity"`
+	CategoryID   string            `json:"category_id,omitempty"`
+	Memo         string            `json:"memo,omitempty"`
+	Modifiers    []ModifierRequest `json:"modifiers,omitempty"`
 }
 
 type ModifierRequest struct {
-	ItemNumber string `json:"item_number,omitempty"`
+	ItemNumber string `json:"item_number"`
 	ScreenCell string `json:"screen_cell,omitempty"`
 	ItemName   string `json:"item_name,omitempty"`
 	Quantity   int    `json:"quantity,omitempty"`
 	Memo       string `json:"memo,omitempty"`
 }
 
-// --- XML marshaling types ---
+type CreateTicketResponse struct {
+	Status          string `json:"status"`
+	ReferenceNumber string `json:"reference_number,omitempty"`
+	Message         string `json:"message,omitempty"`
+}
 
+// --- POSitouch Order XML types ---
 type Orders struct {
 	XMLName  xml.Name   `xml:"Orders"`
 	NewOrder *NewOrder  `xml:"NewOrder,omitempty"`
 }
 
 type NewOrder struct {
-	Function        int    `xml:"Function"`      // 1 == Open Check/Order; 3 == Place/Send/Print
+	Function        int    `xml:"Function"`
 	ErrorLevel      int    `xml:"ErrorLevel"`
 	ReferenceNumber string `xml:"ReferenceNumber,omitempty"`
 	Check           *Check `xml:"Check,omitempty"`
@@ -66,7 +69,6 @@ type CheckHeader struct {
 	ServerNumber   string `xml:"ServerNumber"`
 	NumberInParty  int    `xml:"NumberInParty,omitempty"`
 	TerminalNumber string `xml:"TerminalNumber,omitempty"`
-	CategoryID     string `xml:"CategoryID,omitempty"`
 }
 
 type ItemDetail struct {
@@ -74,6 +76,7 @@ type ItemDetail struct {
 	ScreenCell string   `xml:"ScreenCell,omitempty"`
 	ItemName   string   `xml:"ItemName,omitempty"`
 	Quantity   int      `xml:"Quantity,omitempty"`
+	CategoryID string   `xml:"CategoryID,omitempty"`
 	Memo       string   `xml:"Memo,omitempty"`
 	Options    []Option `xml:"Option,omitempty"` // Modifiers
 }
@@ -86,7 +89,7 @@ type Option struct {
 	Memo       string `xml:"Memo,omitempty"`
 }
 
-// -- Handlers --
+// --- API Handlers ---
 
 func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 	var req CreateTicketRequest
@@ -101,7 +104,6 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 		ServerNumber:   req.ServerNumber,
 		NumberInParty:  req.NumberInParty,
 		TerminalNumber: req.TerminalNumber,
-		CategoryID:     req.CategoryID,
 	}
 
 	order := Orders{
@@ -121,6 +123,7 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 			ScreenCell: it.ScreenCell,
 			ItemName:   it.ItemName,
 			Quantity:   it.Quantity,
+			CategoryID: it.CategoryID,
 			Memo:       it.Memo,
 		}
 		for _, mod := range it.Modifiers {
@@ -140,13 +143,15 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 		http.Error(w, "failed to marshal xml", http.StatusInternalServerError)
 		return
 	}
-	outDir := "/SC/ORDERS" // Change to your SPCWIN XMLInOrderPath!
+	outDir := "/SC/ORDERS" // Update this to your actual XML output dir
 	if err := writeOrderXMLAtomically(xmlData, outDir); err != nil {
 		http.Error(w, "failed to write order file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("Order submitted"))
+	json.NewEncoder(w).Encode(CreateTicketResponse{
+		Status:          "accepted",
+		ReferenceNumber: req.ReferenceNumber,
+	})
 }
 
 func AddTicketItems(w http.ResponseWriter, r *http.Request, locationID, ticketID string) {
