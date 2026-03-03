@@ -10,7 +10,8 @@ import (
 	"time"
 )
 
-// --- Request models ---
+// --- API request/response models ---
+
 type CreateTicketRequest struct {
 	ReferenceNumber string             `json:"reference_number"`
 	TableNumber     string             `json:"table_number"`
@@ -39,20 +40,22 @@ type ModifierRequest struct {
 	Memo       string `json:"memo,omitempty"`
 }
 
+// --- API response model ---
 type CreateTicketResponse struct {
 	Status          string `json:"status"`
 	ReferenceNumber string `json:"reference_number,omitempty"`
 	Message         string `json:"message,omitempty"`
 }
 
-// --- POSitouch Order XML types ---
+// --- POSitouch Ordering XML models ---
+
 type Orders struct {
 	XMLName  xml.Name   `xml:"Orders"`
 	NewOrder *NewOrder  `xml:"NewOrder,omitempty"`
 }
 
 type NewOrder struct {
-	Function        int    `xml:"Function"`
+	Function        int    `xml:"Function"`      // 1 == Open Check/Order
 	ErrorLevel      int    `xml:"ErrorLevel"`
 	ReferenceNumber string `xml:"ReferenceNumber,omitempty"`
 	Check           *Check `xml:"Check,omitempty"`
@@ -76,9 +79,9 @@ type ItemDetail struct {
 	ScreenCell string   `xml:"ScreenCell,omitempty"`
 	ItemName   string   `xml:"ItemName,omitempty"`
 	Quantity   int      `xml:"Quantity,omitempty"`
-	CategoryID string   `xml:"CategoryID,omitempty"`
 	Memo       string   `xml:"Memo,omitempty"`
-	Options    []Option `xml:"Option,omitempty"` // Modifiers
+	CategoryID string   `xml:"CategoryID,omitempty"`
+	Options    []Option `xml:"Option,omitempty"`
 }
 
 type Option struct {
@@ -89,8 +92,9 @@ type Option struct {
 	Memo       string `xml:"Memo,omitempty"`
 }
 
-// --- API Handlers ---
+// --- Main API handler ---
 
+// POST /api/v1/pos-data/{locationId}/tickets
 func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 	var req CreateTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -123,8 +127,8 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 			ScreenCell: it.ScreenCell,
 			ItemName:   it.ItemName,
 			Quantity:   it.Quantity,
-			CategoryID: it.CategoryID,
 			Memo:       it.Memo,
+			CategoryID: it.CategoryID,
 		}
 		for _, mod := range it.Modifiers {
 			item.Options = append(item.Options, Option{
@@ -143,7 +147,8 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, locationID string) {
 		http.Error(w, "failed to marshal xml", http.StatusInternalServerError)
 		return
 	}
-	outDir := "/SC/ORDERS" // Update this to your actual XML output dir
+
+	outDir := "/SC/ORDERS" // TODO: set to your actual ingest directory!
 	if err := writeOrderXMLAtomically(xmlData, outDir); err != nil {
 		http.Error(w, "failed to write order file: "+err.Error(), http.StatusInternalServerError)
 		return
