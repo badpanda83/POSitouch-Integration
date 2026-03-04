@@ -4,10 +4,21 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
+
+	"github.com/badpanda83/POSitouch-Integration/positouch"
+)
+
+const (
+	confirmPollInterval = 2 * time.Second
+	confirmPollTimeout  = 30 * time.Second
+	ticketMatchWindow   = 60 * time.Second
 )
 
 // --- Expanded Models for Ordering, Menu Items, Modifiers, Categories ---
@@ -74,9 +85,33 @@ type ModifierRequest struct {
 
 // --- Order API Response ---
 type CreateTicketResponse struct {
-	Status          string `json:"status"`
+	Status          string             `json:"status"`
+	ReferenceNumber string             `json:"reference_number,omitempty"`
+	Message         string             `json:"message,omitempty"`
+	Ticket          *positouch.Ticket  `json:"ticket"`
+}
+
+type CreateTicketErrorResponse struct {
+	Error           string `json:"error"`
 	ReferenceNumber string `json:"reference_number,omitempty"`
-	Message         string `json:"message,omitempty"`
+}
+
+// --- POSitouch OUT*.XML Confirmation XML models ---
+type OrderConfirmation struct {
+	XMLName     xml.Name             `xml:"OrderConfirmation"`
+	Transaction ConfirmTransaction   `xml:"Transaction"`
+}
+
+type ConfirmTransaction struct {
+	ReferenceNumber string         `xml:"ReferenceNumber"`
+	ResponseCode    int            `xml:"ResponseCode"`
+	Error           *ConfirmError  `xml:"Error"`
+}
+
+type ConfirmError struct {
+	ErrorCode int    `xml:"ErrorCode"`
+	Reference int    `xml:"Reference"`
+	Text      string `xml:"Text"`
 }
 
 // --- POSitouch Ordering XML models ---
@@ -136,11 +171,35 @@ func randomSuffix() string {
 
 // --- Main API handler for Ticket Creation (local HTTP endpoint) ---
 
-func CreateTicket(w http.ResponseWriter, r *http.Request, inorderDir string) {
+func CreateTicket(w http.ResponseWriter, r *http.Request, inorderDir string, xmlDir string, xmlCloseDir string) {
 	var req CreateTicketRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
+	}
+
+	// Change 1: Upfront validation — every item must have item_number or screen_cell.
+	for i, it := range req.Items {
+		if it.ItemNumber == "" && it.ScreenCell == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(CreateTicketErrorResponse{
+				Error:           fmt.Sprintf("item at index %d ('%s') has no item_number or screen_cell — POSitouch requires one of these to identify the item", i, it.ItemName),
+				ReferenceNumber: req.ReferenceNumber,
+			})
+			return
+		}
+		for j, mod := range it.Modifiers {
+			if mod.ItemNumber == "" && mod.ScreenCell == "" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(CreateTicketErrorResponse{
+					Error:           fmt.Sprintf("modifier at index %d ('%s') on item %d has no item_number or screen_cell", j, mod.ItemName, i),
+					ReferenceNumber: req.ReferenceNumber,
+				})
+				return
+			}
+		}
 	}
 
 	checkHeader := CheckHeader{
@@ -193,8 +252,70 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, inorderDir string) {
 		http.Error(w, "failed to write order file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(CreateTicketResponse{
-		Status:          "accepted",
+
+	// Change 2: Poll xmlDir for OUT*.XML confirmation file matching our ReferenceNumber.
+	deadline := time.Now().Add(confirmPollTimeout)
+
+	for time.Now().Before(deadline) {
+		conf, confFile, err := findConfirmation(xmlDir, req.ReferenceNumber)
+		if err == nil && conf != nil {
+			// Clean up the confirmation file.
+			if removeErr := os.Remove(confFile); removeErr != nil {
+				log.Printf("[orders] warning: failed to remove confirmation file %s: %v", confFile, removeErr)
+			}
+
+			if conf.Transaction.ResponseCode != 0 {
+				// Error from POSitouch.
+				errText := ""
+				if conf.Transaction.Error != nil {
+					errText = conf.Transaction.Error.Text
+				}
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(CreateTicketErrorResponse{
+					Error:           errText,
+					ReferenceNumber: req.ReferenceNumber,
+				})
+				return
+			}
+
+			// Change 3: Success — find the newly created ticket.
+			var matchedTicket *positouch.Ticket
+			tableNum, convErr := strconv.Atoi(req.TableNumber)
+			if convErr != nil {
+				log.Printf("[orders] warning: table_number '%s' is not a valid integer: %v", req.TableNumber, convErr)
+			} else {
+				tickets, tickErr := positouch.ReadAllTickets(xmlDir, xmlCloseDir)
+				if tickErr != nil {
+					log.Printf("[orders] warning: failed to read tickets for confirmation: %v", tickErr)
+				} else {
+					for i := range tickets {
+						t := &tickets[i]
+						if t.Table == tableNum && time.Since(t.OpenedAt) <= ticketMatchWindow {
+							matchedTicket = t
+							break
+						}
+					}
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			json.NewEncoder(w).Encode(CreateTicketResponse{
+				Status:          "created",
+				ReferenceNumber: req.ReferenceNumber,
+				Ticket:          matchedTicket,
+			})
+			return
+		}
+		time.Sleep(confirmPollInterval)
+	}
+
+	// Change 2: Timeout — no confirmation received within 30 seconds.
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusGatewayTimeout)
+	json.NewEncoder(w).Encode(CreateTicketErrorResponse{
+		Error:           "timeout: no confirmation from POSitouch after 30s",
 		ReferenceNumber: req.ReferenceNumber,
 	})
 }
@@ -217,6 +338,29 @@ func writeOrderXMLAtomically(xmlData []byte, dir string) error {
 		return err
 	}
 	return os.Rename(tmp, final)
+}
+
+// findConfirmation scans xmlDir for OUT*.XML (and OUT*.xml) files and returns the first
+// OrderConfirmation whose ReferenceNumber matches refNum, along with the file path.
+func findConfirmation(xmlDir, refNum string) (*OrderConfirmation, string, error) {
+	patternsUpper, _ := filepath.Glob(filepath.Join(xmlDir, "OUT*.XML"))
+	patternsLower, _ := filepath.Glob(filepath.Join(xmlDir, "OUT*.xml"))
+	files := append(patternsUpper, patternsLower...)
+
+	for _, f := range files {
+		data, err := os.ReadFile(f)
+		if err != nil {
+			continue
+		}
+		var conf OrderConfirmation
+		if err := xml.Unmarshal(data, &conf); err != nil {
+			continue
+		}
+		if conf.Transaction.ReferenceNumber == refNum {
+			return &conf, f, nil
+		}
+	}
+	return nil, "", fmt.Errorf("not found")
 }
 
 // WriteOrderXML builds and atomically writes a POSitouch XML order file to dir.

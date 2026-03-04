@@ -305,13 +305,15 @@ func main() {
 	})
 
 	xmlInOrderDir := cfg.XMLInOrderDir
+	xmlDir := cfg.XMLDir
+	xmlCloseDir := cfg.XMLCloseDir
 	http.HandleFunc("/api/v1/tickets", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		log.Printf("[orders] incoming order request from %s", r.RemoteAddr)
-		ordering.CreateTicket(w, r, xmlInOrderDir)
+		ordering.CreateTicket(w, r, xmlInOrderDir, xmlDir, xmlCloseDir)
 	})
 
 	go func() {
