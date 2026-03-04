@@ -206,3 +206,52 @@ func writeOrderXMLAtomically(xmlData []byte, dir string) error {
 	}
 	return os.Rename(tmp, final)
 }
+
+// WriteOrderXML builds and atomically writes a POSitouch XML order file to dir.
+func WriteOrderXML(req CreateTicketRequest, dir string) error {
+	checkHeader := CheckHeader{
+		TableNumber:    req.TableNumber,
+		CostCenter:     req.CostCenter,
+		ServerNumber:   req.ServerNumber,
+		NumberInParty:  req.NumberInParty,
+		TerminalNumber: req.TerminalNumber,
+	}
+	order := Orders{
+		NewOrder: &NewOrder{
+			Function:        2,
+			ErrorLevel:      2,
+			ReferenceNumber: req.ReferenceNumber,
+			Check: &Check{
+				CheckHeader: checkHeader,
+			},
+		},
+	}
+
+	for _, it := range req.Items {
+		item := ItemDetail{
+			ItemNumber:   it.ItemNumber,
+			ScreenCell:   it.ScreenCell,
+			ItemName:     it.ItemName,
+			Quantity:     it.Quantity,
+			Memo:         it.Memo,
+			CategoryID:   it.CategoryID,
+			CategoryName: it.CategoryName,
+		}
+		for _, mod := range it.Modifiers {
+			item.Options = append(item.Options, Option{
+				ItemNumber: mod.ItemNumber,
+				ScreenCell: mod.ScreenCell,
+				ItemName:   mod.ItemName,
+				Quantity:   mod.Quantity,
+				Memo:       mod.Memo,
+			})
+		}
+		order.NewOrder.Check.ItemDetails = append(order.NewOrder.Check.ItemDetails, item)
+	}
+
+	xmlData, err := xml.MarshalIndent(order, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeOrderXMLAtomically(xmlData, dir)
+}
