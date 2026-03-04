@@ -30,6 +30,7 @@ func runWExportAndCopyForTables() error {
 		"ExportSettings",
 		"C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\wexport_layout_manifest.xml",
 	)
+	cmd.Dir = positouch.WExportDir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
