@@ -10,6 +10,7 @@ import (
 
 const (
 WExportEXE      = `C:\SC\WExport.EXE`
+WExportDir      = `C:\SC\`
 WExportManifest = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\wexport_layout_manifest.xml`
 Set1XMLSrc      = `C:\SC\set1.xml`
 Set1XMLDst      = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export\set1.xml`
@@ -19,6 +20,7 @@ Set1XMLDst      = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Expor
 // it to the Export folder so no other process can overwrite it before we read it.
 func RunWExportAndCopySet1() error {
 cmd := exec.Command(WExportEXE, "ExportSettings", WExportManifest)
+cmd.Dir = WExportDir
 var stdout, stderr bytes.Buffer
 cmd.Stdout = &stdout
 cmd.Stderr = &stderr
