@@ -2,10 +2,13 @@
 
 import (
 "bytes"
+"context"
 "io"
 "log"
 "os"
 "os/exec"
+"sync"
+"time"
 )
 
 const (
@@ -16,10 +19,20 @@ Set1XMLSrc      = `C:\SC\set1.xml`
 Set1XMLDst      = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export\set1.xml`
 )
 
+var wexportMu sync.Mutex
+
 // RunWExportAndCopySet1 runs WExport.exe to regenerate set1.xml then copies
 // it to the Export folder so no other process can overwrite it before we read it.
+// A package-level mutex ensures only one WExport.exe runs at a time; concurrent
+// callers block until the current run finishes. A 60-second context timeout
+// automatically kills a hung WExport.exe so the mutex is never held indefinitely.
 func RunWExportAndCopySet1() error {
-cmd := exec.Command(WExportEXE, "ExportSettings", WExportManifest)
+wexportMu.Lock()
+defer wexportMu.Unlock()
+
+ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+defer cancel()
+cmd := exec.CommandContext(ctx, WExportEXE, "ExportSettings", WExportManifest)
 cmd.Dir = WExportDir
 var stdout, stderr bytes.Buffer
 cmd.Stdout = &stdout
