@@ -332,6 +332,7 @@ func main() {
 	go func() {
 		for {
 			pollPendingOrders(cfg, cfg.XMLInOrderDir, cfg.XMLDir, cfg.XMLCloseDir)
+			pollPendingPayments(cfg, cfg.XMLInOrderDir)
 			time.Sleep(5 * time.Second)
 		}
 	}()

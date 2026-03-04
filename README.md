@@ -16,6 +16,7 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 - [Data Sources](#data-sources)
 - [Sync Behaviour](#sync-behaviour)
 - [Order Processing Flow](#order-processing-flow)
+- [Payment Processing Flow](#payment-processing-flow)
 - [Local HTTP API](#local-http-api)
 - [POSitouch XML Interface](#positouch-xml-interface)
 - [Logging](#logging)
@@ -41,6 +42,7 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 │    ├── reads DBF/XML → syncs to Railway every 30min          │
 │    ├── syncs tickets to Railway every 30s                    │
 │    ├── polls Railway for pending orders every 5s             │
+│    ├── polls Railway for pending payments every 5s           │
 │    ├── writes ORDER*.XML to OMNIVORE_INORDER                 │
 │    ├── polls OMNIVORE for OUT*.XML confirmation (≤30s)       │
 │    └── PUTs result back to Railway                           │
@@ -66,7 +68,7 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 5. Upload all entities to Railway cloud server
 6. Start ticket sync goroutine (every 30 seconds)
 7. Start entity sync goroutine (every 30 minutes)
-8. Start order poller goroutine (every 5 seconds)
+8. Start order + payment poller goroutine (every 5 seconds)
 9. Start local HTTP server on `:8080`
 10. Wait for SIGINT/SIGTERM
 
@@ -74,7 +76,7 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 
 - **Every 30s:** Read all open+closed tickets from `C:\SC\XML\OMNIVORE\` and `C:\SC\XML\OMNIVORE_CLOSE\` and `PUT` them to Railway.
 - **Every 30min:** Re-run WExport, re-read all DBF/XML files, re-upload all 9 entity types.
-- **Every 5s:** `GET` pending orders from Railway, process each one (see below).
+- **Every 5s:** `GET` pending orders from Railway, process each one (see below). Also `GET` pending payments and process each one (see [Payment Processing Flow](#payment-processing-flow)).
 
 ---
 
@@ -184,7 +186,7 @@ To stop: `Ctrl+C` or send `SIGTERM`. The agent shuts down gracefully.
 ```
 POSitouch-Integration/
 ├── main.go              # Entry point — config, startup, goroutines, HTTP server
-├── poller.go            # pollPendingOrders, reportOrderResult, putOrderResult
+├── poller.go            # pollPendingOrders/Payments, reportOrderResult/PaymentResult, putOrderResult/PaymentResult
 ├── config/
 │   └── config.go        # rooam_config.json loader
 ├── ordering/
@@ -289,6 +291,103 @@ For each pending order:
    - If `ResponseCode == 0`: read tickets, find matching ticket by `table == req.TableNumber && opened within 60s`, `PUT` `status="created"` with full ticket
    - If `ResponseCode != 0`: `PUT` `status="failed"` with error text from `<Error><Text>`
 3. After 30 seconds with no confirmation: `PUT` `status="failed"` with timeout message
+
+---
+
+## Payment Processing Flow
+
+```
+Railway                          Agent                         POSitouch
+   │                               │                               │
+   │  GET /payments/pending        │                               │
+   │◄──────────────────────────────│                               │
+   │  [ {ref, payload}, ... ]      │                               │
+   │──────────────────────────────►│                               │
+   │                               │  WritePaymentXML(req)         │
+   │                               │──────────────────────────────►│
+   │                               │  ORDER        .XML written    │
+   │                               │  to OMNIVORE_INORDER          │
+   │                               │  (Function=4: pay + close)    │
+   │                               │                               │
+   │                               │  poll OMNIVORE for OUT*.XML   │
+   │                               │  every 2s, up to 30s         │
+   │                               │◄──────────────────────────────│
+   │                               │  OUT   .XML written           │
+   │                               │  (ResponseCode=0 = success)   │
+   │                               │                               │
+   │  PUT /payments/{ref}/result   │                               │
+   │◄──────────────────────────────│                               │
+   │  { status:"paid" }            │                               │
+```
+
+### On each poll cycle (every 5s)
+
+For each pending payment:
+1. Unmarshal `payload` into `ordering.PaymentRequest`
+2. Call `ordering.WritePaymentXML(req, xmlInOrderDir)` — atomically writes `ORDER<random>.XML` with `<Function>4</Function>` (POSitouch pay + close)
+3. Launch `go reportPaymentResult(...)` — non-blocking
+4. If `WritePaymentXML` fails: immediately `PUT` `status="failed"` to Railway
+
+### In `reportPaymentResult`
+
+1. Poll `xmlDir` every 2 seconds for `OUT*.XML` where `<ReferenceNumber>` matches
+2. On finding confirmation file:
+   - Delete the `OUT*.XML` file
+   - If `ResponseCode == 0`: `PUT` `status="paid"` to Railway
+   - If `ResponseCode != 0`: `PUT` `status="failed"` with error text from `<Error><Text>`
+3. After 30 seconds with no confirmation: `PUT` `status="failed"` with timeout message
+
+### Payment XML file (`ORDER*.XML`, Function=4)
+
+Written to `xml_in_order_dir`. POSitouch picks this up and applies the tender to the specified check, then closes it.
+
+```xml
+<Orders>
+  <UpdateOrder>
+    <CheckNumber>62</CheckNumber>
+    <Function>4</Function>
+    <ErrorLevel>2</ErrorLevel>
+    <GuestCheckCopies>0</GuestCheckCopies>
+    <AutoReprintCheckCopies>0</AutoReprintCheckCopies>
+    <ReferenceNumber>rooam-pay-001</ReferenceNumber>
+    <Check>
+      <CheckHeader>
+        <TerminalNumber>1</TerminalNumber>
+      </CheckHeader>
+    </Check>
+    <Payment>
+      <PaymentHeader>
+        <CashierNumber>976</CashierNumber>
+        <TerminalNumber>1</TerminalNumber>
+        <PaymentTerminal>1</PaymentTerminal>
+      </PaymentHeader>
+      <PaymentDetail>
+        <PaymentType>10</PaymentType>
+        <PaymentAmount>42.75</PaymentAmount>
+        <PaymentTip>5.00</PaymentTip>
+        <PaymentMemo>*{rooam-pay-001}</PaymentMemo>
+      </PaymentDetail>
+    </Payment>
+  </UpdateOrder>
+</Orders>
+```
+
+### `PaymentRequest` JSON fields
+
+| Field | Type | Description |
+|---|---|---|
+| `reference_number` | string | Unique payment reference (used for correlation with `OUT*.XML`) |
+| `ticket_number` | int | POSitouch check number to pay |
+| `sub_ticket_number` | int | Sub-check number (optional) |
+| `tender_type_id` | int | POSitouch tender type code |
+| `amount` | int | Payment amount in **cents** (e.g. `4275` = $42.75) |
+| `tip_amount` | int | Tip amount in **cents** (optional) |
+| `allows_tips` | bool | If true, `<PaymentTip>` is included even when `tip_amount` is 0 |
+| `cashier_number` | string | POSitouch cashier/server number |
+| `terminal_number` | string | POSitouch terminal number (used in `CheckHeader`, `PaymentHeader`, and `PaymentTerminal`) |
+| `guest_check_copies` | int | Number of guest check copies to print (optional) |
+| `auto_reprint_check_copies` | int | Number of auto-reprint check copies (optional) |
+| `comment` | string | Free-text comment — written as `*{comment}` in `<PaymentMemo>` (optional) |
 
 ---
 

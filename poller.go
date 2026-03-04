@@ -178,3 +178,138 @@ func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, 
 
 	log.Printf("[poller] reported result for ref=%s status=%s http=%s", referenceNumber, status, resp.Status)
 }
+
+func pollPendingPayments(cfg *config.Config, xmlInOrderDir string) {
+	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
+	locationID := cfg.LocationID
+	if locationID == "" {
+		locationID = cfg.Location.Name
+	}
+
+	rawURL := fmt.Sprintf("%s/%s/payments/pending", base, locationID)
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		log.Printf("[poller] error parsing URL: %v", err)
+		return
+	}
+
+	req, err := http.NewRequest("GET", parsed.String(), nil)
+	if err != nil {
+		log.Printf("[poller] error building request: %v", err)
+		return
+	}
+	if cfg.Cloud.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("[poller] error contacting cloud server: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("[poller] unexpected status from cloud server: %s", resp.Status)
+		return
+	}
+
+	var pending []struct {
+		ReferenceNumber string          `json:"reference_number"`
+		LocationID      string          `json:"location_id"`
+		Payload         json.RawMessage `json:"payload"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&pending); err != nil {
+		log.Printf("[poller] error decoding response: %v", err)
+		return
+	}
+	if len(pending) == 0 {
+		return
+	}
+	log.Printf("[poller] received %d pending payment(s)", len(pending))
+
+	for _, p := range pending {
+		var payReq ordering.PaymentRequest
+		if err := json.Unmarshal(p.Payload, &payReq); err != nil {
+			log.Printf("[poller] error unmarshalling payment %s: %v", p.ReferenceNumber, err)
+			continue
+		}
+		if err := ordering.WritePaymentXML(payReq, xmlInOrderDir); err != nil {
+			log.Printf("[poller] error writing payment XML for ref=%s: %v", payReq.ReferenceNumber, err)
+			go putPaymentResult(cfg, payReq.ReferenceNumber, "failed", err.Error())
+		} else {
+			log.Printf("[poller] wrote payment XML for ref=%s", payReq.ReferenceNumber)
+			go reportPaymentResult(cfg, payReq.ReferenceNumber, xmlInOrderDir)
+		}
+	}
+}
+
+func reportPaymentResult(cfg *config.Config, referenceNumber string, xmlDir string) {
+	deadline := time.Now().Add(pollerConfirmTimeout)
+	for time.Now().Before(deadline) {
+		conf, confFile, err := ordering.FindConfirmation(xmlDir, referenceNumber)
+		if err == nil && conf != nil {
+			if removeErr := os.Remove(confFile); removeErr != nil {
+				log.Printf("[poller] warning: failed to remove confirmation file %s: %v", confFile, removeErr)
+			}
+
+			if conf.Transaction.ResponseCode != 0 {
+				errText := ""
+				if conf.Transaction.Error != nil {
+					errText = conf.Transaction.Error.Text
+				}
+				putPaymentResult(cfg, referenceNumber, "failed", errText)
+				return
+			}
+
+			putPaymentResult(cfg, referenceNumber, "paid", "")
+			return
+		}
+		time.Sleep(pollerConfirmInterval)
+	}
+
+	putPaymentResult(cfg, referenceNumber, "failed", fmt.Sprintf("timeout: no confirmation from POSitouch after %.0fs", pollerConfirmTimeout.Seconds()))
+}
+
+func putPaymentResult(cfg *config.Config, referenceNumber, status, errMsg string) {
+	locationID := cfg.LocationID
+	if locationID == "" {
+		locationID = cfg.Location.Name
+	}
+
+	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
+	rawURL := fmt.Sprintf("%s/%s/payments/%s/result", base, locationID, referenceNumber)
+
+	body := struct {
+		Status string `json:"status"`
+		Error  string `json:"error,omitempty"`
+	}{
+		Status: status,
+		Error:  errMsg,
+	}
+
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		log.Printf("[poller] error marshalling payment result for ref=%s: %v", referenceNumber, err)
+		return
+	}
+
+	req, err := http.NewRequest("PUT", rawURL, bytes.NewReader(bodyBytes))
+	if err != nil {
+		log.Printf("[poller] error building PUT request for ref=%s: %v", referenceNumber, err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if cfg.Cloud.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("[poller] error sending payment result for ref=%s: %v", referenceNumber, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	log.Printf("[poller] reported payment result for ref=%s status=%s http=%s", referenceNumber, status, resp.Status)
+}
