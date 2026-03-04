@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
@@ -19,9 +20,24 @@ func pollPendingOrders(cfg *config.Config, xmlInOrderDir string) {
 	if locationID == "" {
 		locationID = cfg.Location.Name
 	}
-	url := fmt.Sprintf("%s/%s/tickets/pending", base, locationID)
 
-	req, err := http.NewRequest("GET", url, nil)
+	// Build the URL manually using url.URL with Opaque to prevent Go from
+	// percent-encoding the apostrophe in location names like "Smitty's".
+	// Go's http.NewRequest encodes ' -> %27 which Railway does not match.
+	rawURL := fmt.Sprintf("%s/%s/tickets/pending", base, locationID)
+	parsedBase, err := url.Parse(base)
+	if err != nil {
+		log.Printf("[poller] error parsing base URL: %v", err)
+		return
+	}
+	reqURL := &url.URL{
+		Scheme: parsedBase.Scheme,
+		Host:   parsedBase.Host,
+		Opaque: fmt.Sprintf("//%s%s/%s/tickets/pending", parsedBase.Host, parsedBase.Path, locationID),
+	}
+	_ = rawURL // suppress unused warning
+
+	req, err := http.NewRequest("GET", reqURL.String(), nil)
 	if err != nil {
 		log.Printf("[poller] error building request: %v", err)
 		return
