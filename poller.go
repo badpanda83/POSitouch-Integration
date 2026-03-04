@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
@@ -13,12 +12,15 @@ import (
 )
 
 func pollPendingOrders(cfg *config.Config, xmlInOrderDir string) {
+	// Use cfg.Cloud.Endpoint (already set in rooam_config.json) as the base URL.
+	// Trim trailing slash to avoid double-slash in the final URL.
+	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	locationID := cfg.LocationID
 	if locationID == "" {
 		locationID = cfg.Location.Name
 	}
-	endpoint := strings.TrimSuffix(cfg.Cloud.Endpoint, "/")
-	url := fmt.Sprintf("%s/%s/tickets/pending", endpoint, url.PathEscape(locationID))
+	url := fmt.Sprintf("%s/%s/tickets/pending", base, locationID)
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("[poller] error building request: %v", err)
@@ -27,6 +29,7 @@ func pollPendingOrders(cfg *config.Config, xmlInOrderDir string) {
 	if cfg.Cloud.APIKey != "" {
 		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
 	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("[poller] error contacting cloud server: %v", err)
@@ -54,12 +57,12 @@ func pollPendingOrders(cfg *config.Config, xmlInOrderDir string) {
 	log.Printf("[poller] received %d pending order(s)", len(pending))
 
 	for _, p := range pending {
-		var req ordering.CreateTicketRequest
-		if err := json.Unmarshal(p.Payload, &req); err != nil {
+		var ticketReq ordering.CreateTicketRequest
+		if err := json.Unmarshal(p.Payload, &ticketReq); err != nil {
 			log.Printf("[poller] error unmarshalling order %s: %v", p.ReferenceNumber, err)
 			continue
 		}
-		if err := ordering.WriteOrderXML(req, xmlInOrderDir); err != nil {
+		if err := ordering.WriteOrderXML(ticketReq, xmlInOrderDir); err != nil {
 			log.Printf("[poller] error writing XML for order %s: %v", p.ReferenceNumber, err)
 		} else {
 			log.Printf("[poller] wrote XML for order ref=%s", p.ReferenceNumber)
