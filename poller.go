@@ -5,14 +5,29 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/ordering"
 )
 
 func pollPendingOrders(cfg *config.Config, xmlInOrderDir string) {
-	url := fmt.Sprintf("%s/api/v1/pos-data/%s/tickets/pending", cfg.CloudServerURL, cfg.LocationID)
-	resp, err := http.Get(url) //nolint:gosec
+	locationID := cfg.LocationID
+	if locationID == "" {
+		locationID = cfg.Location.Name
+	}
+	endpoint := strings.TrimSuffix(cfg.Cloud.Endpoint, "/")
+	url := fmt.Sprintf("%s/%s/tickets/pending", endpoint, url.PathEscape(locationID))
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Printf("[poller] error building request: %v", err)
+		return
+	}
+	if cfg.Cloud.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("[poller] error contacting cloud server: %v", err)
 		return
