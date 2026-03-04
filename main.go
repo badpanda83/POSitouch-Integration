@@ -24,7 +24,7 @@ const (
 	appName   = "rooam-pos-agent"
 	appVersion = "1.0.0"
 	exportDir  = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
-	tablesXML    = `C:\SC\set1.xml`
+	tablesXML    = exportDir + `\set1.xml`
 )
 
 var store = struct {
@@ -67,6 +67,13 @@ func main() {
 	// --- AUTOMATIC CACHE & UPLOAD FUNCTION ---
 	cacheAndUpload := func() {
 		log.Printf("[sync] Refreshing & uploading POSitouch entities for location: %s", locationID)
+
+		// Regenerate and copy set1.xml so table data is fresh
+		if err := positouch.RunWExportAndCopySet1(); err != nil {
+			log.Printf("[sync][WARN] WExport failed, tables may be stale: %v", err)
+		} else {
+			log.Printf("[sync] WExport completed, set1.xml refreshed")
+		}
 
 		costCenters, _ := positouch.ReadCostCenters(cfg.DBFDir)
 		tenders, _ := positouch.ReadTenders(cfg.DBFDir)
