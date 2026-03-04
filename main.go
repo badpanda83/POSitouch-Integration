@@ -272,6 +272,14 @@ func main() {
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}()
 
+	go func() {
+		for {
+			pollPendingOrders(cfg, cfg.XMLInOrderDir)
+			time.Sleep(5 * time.Second)
+		}
+	}()
+	log.Println("[agent] polling Railway for pending orders every 5s")
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs

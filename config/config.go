@@ -51,6 +51,9 @@ type Config struct {
     XMLCloseDir    string      `json:"xml_close_dir"`     // closed tickets directory
     XMLInOrderDir  string      `json:"xml_inorder_dir"`   // inbound order drop directory
 
+    CloudServerURL string `json:"cloud_server_url"` // base URL of the Railway cloud server
+    LocationID     string `json:"location_id"`      // location identifier used with the cloud server
+
     SCDir      string
     SCPath     string
     DBFDir     string
@@ -91,6 +94,16 @@ func Load(path string) (*Config, error) {
     cfg.AltDBFDir  = cfg.ALTDBFDir
 
     cfg.InstallDir = filepath.Dir(path)
+
+    if cfg.CloudServerURL == "" {
+        cfg.CloudServerURL = os.Getenv("CLOUD_SERVER_URL")
+    }
+    if cfg.LocationID == "" {
+        cfg.LocationID = os.Getenv("LOCATION_ID")
+    }
+    if cfg.LocationID == "" {
+        cfg.LocationID = cfg.Location.Name
+    }
 
     return &cfg, nil
 }
