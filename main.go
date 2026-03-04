@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -189,6 +190,57 @@ func main() {
 			cacheAndUpload()
 		}
 	}()
+
+	// --- FAST TICKET REFRESH FUNCTION ---
+	refreshTickets := func() {
+		tickets, err := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
+		if err != nil {
+			log.Printf("[ticket_sync] error reading tickets: %v", err)
+			return
+		}
+		log.Printf("[ticket_sync] found %d tickets", len(tickets))
+
+		existing, ok := store.data[locationID]
+		if !ok {
+			log.Printf("[ticket_sync] location %q not yet in store, skipping update", locationID)
+			return
+		}
+		existing.CurrentTickets = tickets
+		store.data[locationID] = existing
+
+		if err := c.Update(existing); err != nil {
+			log.Printf("[ticket_sync] cache update error: %v", err)
+		}
+
+		data, err := json.Marshal(tickets)
+		if err != nil {
+			log.Printf("[ticket_sync] failed to marshal tickets: %v", err)
+			return
+		}
+		url := fmt.Sprintf("%s/%s/tickets", apiBaseURL, locationID)
+		req, err := http.NewRequest("PUT", url, bytes.NewReader(data))
+		if err != nil {
+			log.Printf("[ticket_sync] failed to create request: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Printf("[ticket_sync] failed to upload tickets: %v", err)
+			return
+		}
+		resp.Body.Close()
+		log.Printf("[ticket_sync] uploaded tickets, response status: %s", resp.Status)
+	}
+
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			refreshTickets()
+		}
+	}()
+	log.Println("[ticket_sync] polling tickets every 30s")
 
 	http.HandleFunc("/api/v1/pos-data", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
