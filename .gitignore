@@ -6,3 +6,14 @@ rooam_config.json
 
 rooam-pos-agent.exe
 rooam_cache.json
+
+*.CSV
+*.EXP
+*.PDF
+*.LOG
+agent-err.log
+agent.log
+utils/Export/
+utils/test-order.ps1
+fix_tables.py
+expset.cmd
