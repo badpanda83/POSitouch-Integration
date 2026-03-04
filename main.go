@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -64,6 +65,13 @@ func main() {
 	// double-slash URLs like ".../pos-data//store1/categories" â†’ 400 Bad Request
 	apiBaseURL := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	apiKey := cfg.Cloud.APIKey
+
+	// Kill any stale WExport.EXE processes left from previous runs.
+	// taskkill returns a non-zero exit code when no matching process exists,
+	// which is the normal/expected case — only log when we actually killed one.
+	if err := exec.Command("taskkill", "/F", "/IM", "WExport.EXE").Run(); err == nil {
+		log.Printf("[main] killed stale WExport.EXE process(es)")
+	}
 
 	// --- AUTOMATIC CACHE & UPLOAD FUNCTION ---
 	cacheAndUpload := func() {

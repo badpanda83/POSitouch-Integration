@@ -4,11 +4,13 @@ package agent
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/badpanda83/POSitouch-Integration/cache"
@@ -23,9 +25,18 @@ const RefreshInterval = 30 * time.Minute
 const ExportDir = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
 
 // --- Robust WExport runner with logging ---
+
+var wexportMu sync.Mutex
+
 func runWExportAndCopyForTables() error {
+	wexportMu.Lock()
+	defer wexportMu.Unlock()
+
 	// 1. Generate fresh set1.xml using WExport.exe, capturing output for logs
-	cmd := exec.Command(
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(
+		ctx,
 		"C:\\SC\\WExport.EXE",
 		"ExportSettings",
 		"C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\wexport_layout_manifest.xml",
