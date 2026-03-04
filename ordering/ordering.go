@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 // --- Expanded Models for Ordering, Menu Items, Modifiers, Categories ---
@@ -69,7 +69,7 @@ type ModifierRequest struct {
 	ItemNumber string `json:"item_number"`
 	ScreenCell string `json:"screen_cell,omitempty"`
 	ItemName   string `json:"item_name,omitempty"`
-	Quantity   int    `json:"quantity,omitempty"`
+	Quantity   int    `json:"quantity"`
 	Memo       string `json:"memo,omitempty"`
 }
 
@@ -82,8 +82,8 @@ type CreateTicketResponse struct {
 
 // --- POSitouch Ordering XML models ---
 type Orders struct {
-	XMLName  xml.Name   `xml:"Orders"`
-	NewOrder *NewOrder  `xml:"NewOrder,omitempty"`
+	XMLName  xml.Name  `xml:"Orders"`
+	NewOrder *NewOrder `xml:"NewOrder,omitempty"`
 }
 
 type NewOrder struct {
@@ -94,8 +94,8 @@ type NewOrder struct {
 }
 
 type Check struct {
-	CheckHeader CheckHeader   `xml:"CheckHeader"`
-	ItemDetails []ItemDetail  `xml:"ItemDetail,omitempty"`
+	CheckHeader CheckHeader  `xml:"CheckHeader"`
+	ItemDetails []ItemDetail `xml:"ItemDetail,omitempty"`
 }
 
 type CheckHeader struct {
@@ -110,7 +110,7 @@ type ItemDetail struct {
 	ItemNumber   string   `xml:"ItemNumber,omitempty"`
 	ScreenCell   string   `xml:"ScreenCell,omitempty"`
 	ItemName     string   `xml:"ItemName,omitempty"`
-	Quantity     int      `xml:"Quantity,omitempty"`
+	Quantity     int      `xml:"Quantity"`
 	Memo         string   `xml:"Memo,omitempty"`
 	CategoryID   string   `xml:"CategoryID,omitempty"`
 	CategoryName string   `xml:"CategoryName,omitempty"`
@@ -121,8 +121,18 @@ type Option struct {
 	ItemNumber string `xml:"ItemNumber,omitempty"`
 	ScreenCell string `xml:"ScreenCell,omitempty"`
 	ItemName   string `xml:"ItemName,omitempty"`
-	Quantity   int    `xml:"Quantity,omitempty"`
+	Quantity   int    `xml:"Quantity"`
 	Memo       string `xml:"Memo,omitempty"`
+}
+
+// randomSuffix returns a 6-character lowercase alphanumeric string.
+func randomSuffix() string {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = chars[rand.Intn(len(chars))]
+	}
+	return string(b)
 }
 
 // --- Main API handler for Ticket Creation ---
@@ -198,9 +208,12 @@ func AddTicketPayments(w http.ResponseWriter, r *http.Request, locationID, ticke
 	http.Error(w, "AddTicketPayments not yet implemented", http.StatusNotImplemented)
 }
 
+// writeOrderXMLAtomically writes xmlData to a temp file then renames it to
+// OC<suffix>.XML — matching the naming convention POSitouch expects.
 func writeOrderXMLAtomically(xmlData []byte, dir string) error {
-	tmp := filepath.Join(dir, fmt.Sprintf("ORDER_%d.tmp", time.Now().UnixNano()))
-	final := strings.TrimSuffix(tmp, ".tmp") + ".XML"
+	suffix := randomSuffix()
+	tmp := filepath.Join(dir, fmt.Sprintf("OC%s.tmp", suffix))
+	final := filepath.Join(dir, fmt.Sprintf("OC%s.XML", suffix))
 	if err := os.WriteFile(tmp, xmlData, 0644); err != nil {
 		return err
 	}
@@ -208,6 +221,9 @@ func writeOrderXMLAtomically(xmlData []byte, dir string) error {
 }
 
 // WriteOrderXML builds and atomically writes a POSitouch XML order file to dir.
+// Function=1: place order, items not sent to prep yet.
+// Function=2: place and send to prep.
+// Function=3: place, send and print check.
 func WriteOrderXML(req CreateTicketRequest, dir string) error {
 	checkHeader := CheckHeader{
 		TableNumber:    req.TableNumber,
@@ -218,7 +234,7 @@ func WriteOrderXML(req CreateTicketRequest, dir string) error {
 	}
 	order := Orders{
 		NewOrder: &NewOrder{
-			Function:        2,
+			Function:        2, // place and send to prep
 			ErrorLevel:      2,
 			ReferenceNumber: req.ReferenceNumber,
 			Check: &Check{
