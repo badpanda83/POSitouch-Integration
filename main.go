@@ -331,7 +331,7 @@ func main() {
 
 	go func() {
 		for {
-			pollPendingOrders(cfg, cfg.XMLInOrderDir)
+			pollPendingOrders(cfg, cfg.XMLInOrderDir, cfg.XMLDir, cfg.XMLCloseDir)
 			time.Sleep(5 * time.Second)
 		}
 	}()
