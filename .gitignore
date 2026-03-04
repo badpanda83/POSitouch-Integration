@@ -3,3 +3,6 @@ rooam_cache.json
 data_cache/*.cache
 
 rooam_config.json
+
+rooam-pos-agent.exe
+rooam_cache.json
