@@ -200,18 +200,6 @@ func main() {
 		}
 		log.Printf("[ticket_sync] found %d tickets", len(tickets))
 
-		existing, ok := store.data[locationID]
-		if !ok {
-			log.Printf("[ticket_sync] location %q not yet in store, skipping update", locationID)
-			return
-		}
-		existing.CurrentTickets = tickets
-		store.data[locationID] = existing
-
-		if err := c.Update(existing); err != nil {
-			log.Printf("[ticket_sync] cache update error: %v", err)
-		}
-
 		data, err := json.Marshal(tickets)
 		if err != nil {
 			log.Printf("[ticket_sync] failed to marshal tickets: %v", err)
