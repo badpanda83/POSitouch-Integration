@@ -257,7 +257,7 @@ func CreateTicket(w http.ResponseWriter, r *http.Request, inorderDir string, xml
 	deadline := time.Now().Add(confirmPollTimeout)
 
 	for time.Now().Before(deadline) {
-		conf, confFile, err := findConfirmation(xmlDir, req.ReferenceNumber)
+		conf, confFile, err := FindConfirmation(xmlDir, req.ReferenceNumber)
 		if err == nil && conf != nil {
 			// Clean up the confirmation file.
 			if removeErr := os.Remove(confFile); removeErr != nil {
@@ -340,9 +340,9 @@ func writeOrderXMLAtomically(xmlData []byte, dir string) error {
 	return os.Rename(tmp, final)
 }
 
-// findConfirmation scans xmlDir for OUT*.XML (and OUT*.xml) files and returns the first
+// FindConfirmation scans xmlDir for OUT*.XML (and OUT*.xml) files and returns the first
 // OrderConfirmation whose ReferenceNumber matches refNum, along with the file path.
-func findConfirmation(xmlDir, refNum string) (*OrderConfirmation, string, error) {
+func FindConfirmation(xmlDir, refNum string) (*OrderConfirmation, string, error) {
 	patternsUpper, _ := filepath.Glob(filepath.Join(xmlDir, "OUT*.XML"))
 	patternsLower, _ := filepath.Glob(filepath.Join(xmlDir, "OUT*.xml"))
 	files := append(patternsUpper, patternsLower...)
