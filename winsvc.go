@@ -6,12 +6,13 @@
 // svc.IsWindowsService() returns true and we hand control to svc.Run(), which:
 //
 //  1. Calls agentService.Execute(), which reports StartPending → Running to SCM.
-//  2. Runs the agent loop (runAgent) in the background.
-//  3. Blocks until SCM sends a Stop or Shutdown command, then signals runAgent to exit.
+//  2. Blocks inside Execute() processing SCM commands until Stop or Shutdown.
+//  3. Returns to runAsWindowsService, which returns true to main().
+//  4. main() returns — the process exits cleanly.
 //
 // When run interactively (e.g. .\rooam-pos-agent.exe -config .\rooam_config.json),
-// svc.IsWindowsService() returns false and we fall straight through to runAgent,
-// which uses os/signal (SIGINT / SIGTERM) as before — no behaviour change.
+// svc.IsWindowsService() returns false and runAsWindowsService returns false
+// immediately, so main() continues with its normal startup and signal handling.
 
 package main
 
@@ -24,58 +25,40 @@ import (
 const windowsServiceName = "RooamPOSAgent"
 
 // agentService implements svc.Handler so the Windows SCM can manage the agent.
-type agentService struct {
-	configPath string
-}
+type agentService struct{}
 
 // Execute is called by svc.Run when the SCM starts the service.
 // It must signal Running within the SCM timeout (~30 s) or the service fails to start.
 func (s *agentService) Execute(args []string, req <-chan svc.ChangeRequest, status chan<- svc.Status) (svcSpecificEC bool, exitCode uint32) {
-	// 1. Acknowledge that we are starting.
+	// Signal StartPending then Running as quickly as possible to satisfy the SCM
+	// timeout (Error 7009). The agent's sync goroutines were already started by
+	// main() before runAsWindowsService was called, so the service is functional.
 	status <- svc.Status{State: svc.StartPending}
-
-	// 2. Start the agent run loop in a goroutine so we can return Running immediately.
-	stopCh := make(chan struct{})
-	doneCh := make(chan struct{})
-go func() {
-		defer close(doneCh)
-		runAgent(s.configPath, stopCh)
-	}()
-
-	// 3. Tell SCM we are running — this is the call that fixes the 7009 timeout.
 	status <- svc.Status{
 		State:   svc.Running,
 		Accepts: svc.AcceptStop | svc.AcceptShutdown,
 	}
 	log.Printf("[winsvc] service %q is running", windowsServiceName)
 
-	// 4. Process SCM control requests.
-	for {
-		select {
-		case c := <-req:
-			switch c.Cmd {
-			case svc.Stop, svc.Shutdown:
-				log.Printf("[winsvc] received SCM command %v — stopping", c.Cmd)
-				status <- svc.Status{State: svc.StopPending}
-				close(stopCh) // signal runAgent to exit
-				<-doneCh      // wait for clean shutdown
-				return false, 0
-			case svc.Interrogate:
-				status <- c.CurrentStatus
-			default:
-				log.Printf("[winsvc] unexpected SCM command %v — ignoring", c.Cmd)
-			}
-		case <-doneCh:
-			// runAgent returned on its own (should not normally happen).
-			log.Printf("[winsvc] agent loop exited unexpectedly — stopping service")
+	for c := range req {
+		switch c.Cmd {
+		case svc.Stop, svc.Shutdown:
+			log.Printf("[winsvc] received SCM command %v — stopping", c.Cmd)
+			status <- svc.Status{State: svc.StopPending}
 			return false, 0
+		case svc.Interrogate:
+			status <- c.CurrentStatus
+		default:
+			log.Printf("[winsvc] unexpected SCM command %v — ignoring", c.Cmd)
 		}
 	}
+	return false, 0
 }
 
 // runAsWindowsService checks whether we were launched by the SCM and, if so,
-// hands control to svc.Run and returns true. The caller should return immediately.
-// If we are running interactively it returns false.
+// calls svc.Run (which blocks until Stop/Shutdown) and returns true.
+// The caller (main) should return immediately after this returns true.
+// If running interactively, returns false without blocking.
 func runAsWindowsService(configPath string) bool {
 	isSvc, err := svc.IsWindowsService()
 	if err != nil {
@@ -85,7 +68,7 @@ func runAsWindowsService(configPath string) bool {
 	if !isSvc {
 		return false
 	}
-	if err := svc.Run(windowsServiceName, &agentService{configPath: configPath}); err != nil {
+	if err := svc.Run(windowsServiceName, &agentService{}); err != nil {
 		log.Printf("[winsvc] svc.Run returned error: %v", err)
 	}
 	return true
