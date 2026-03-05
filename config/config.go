@@ -42,12 +42,27 @@ type CloudConfig struct {
 	APIKey   string `json:"api_key"`
 }
 
+// OAuthConfig holds settings for OAuth 2.0 / OIDC authentication.
+// Only used when auth_mode == "oauth". Currently stubbed — see TODO(phase-3b).
+type OAuthConfig struct {
+	ProviderURL       string   `json:"provider_url"`        // e.g. https://your-company.okta.com/oauth2/default
+	ClientID          string   `json:"client_id"`
+	ClientSecret      string   `json:"client_secret"`
+	Scopes            []string `json:"scopes"`
+	TokenRefreshHours int      `json:"token_refresh_hours"` // force re-auth interval (0 = IdP expiry only)
+}
+
 // ----- Top-level Config -----
 type Config struct {
 	Location  Location    `json:"location"`
 	Rooam     Rooam       `json:"rooam"`
 	POSitouch POSitouch   `json:"positouch"`
 	Cloud     CloudConfig `json:"cloud"`
+
+	// AuthMode selects the authentication provider. Values: "static" (default) | "oauth"
+	// TODO(phase-3b): set to "oauth" once OAuthProvider is implemented.
+	AuthMode string       `json:"auth_mode,omitempty"`
+	OAuth    *OAuthConfig `json:"oauth,omitempty"`
 
 	// POSType selects which driver to load. Values: "positouch" | "micros3700"
 	POSType string `json:"pos_type"`

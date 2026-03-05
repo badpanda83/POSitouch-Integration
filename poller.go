@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/badpanda83/POSitouch-Integration/auth"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/driver"
 	"github.com/badpanda83/POSitouch-Integration/entities"
@@ -22,7 +23,7 @@ const (
 	pollerConfirmInterval = 2 * time.Second
 )
 
-func pollPendingOrders(cfg *config.Config, posDriver driver.POSDriver) {
+func pollPendingOrders(cfg *config.Config, provider auth.TokenProvider, posDriver driver.POSDriver) {
 	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	locationID := cfg.LocationID
 	if locationID == "" {
@@ -41,8 +42,13 @@ func pollPendingOrders(cfg *config.Config, posDriver driver.POSDriver) {
 		log.Printf("[poller] error building request: %v", err)
 		return
 	}
-	if cfg.Cloud.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	token, err := provider.GetAccessToken()
+	if err != nil {
+		log.Printf("[poller] error getting access token: %v", err)
+		return
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -77,20 +83,20 @@ func pollPendingOrders(cfg *config.Config, posDriver driver.POSDriver) {
 			log.Printf("[poller] error unmarshalling order %s: %v", p.ReferenceNumber, err)
 			continue
 		}
-		go reportOrderResult(cfg, posDriver, p.ReferenceNumber, ticketReq)
+		go reportOrderResult(cfg, provider, posDriver, p.ReferenceNumber, ticketReq)
 	}
 }
 
-func reportOrderResult(cfg *config.Config, posDriver driver.POSDriver, referenceNumber string, req entities.CreateOrderRequest) {
+func reportOrderResult(cfg *config.Config, provider auth.TokenProvider, posDriver driver.POSDriver, referenceNumber string, req entities.CreateOrderRequest) {
 	ticket, err := posDriver.CreateOrder(req)
 	if err != nil {
-		putOrderResult(cfg, referenceNumber, "failed", err.Error(), nil)
+		putOrderResult(cfg, provider, referenceNumber, "failed", err.Error(), nil)
 		return
 	}
-	putOrderResult(cfg, referenceNumber, "created", "", ticket)
+	putOrderResult(cfg, provider, referenceNumber, "created", "", ticket)
 }
 
-func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, ticket *entities.Ticket) {
+func putOrderResult(cfg *config.Config, provider auth.TokenProvider, referenceNumber, status, errMsg string, ticket *entities.Ticket) {
 	locationID := cfg.LocationID
 	if locationID == "" {
 		locationID = cfg.Location.Name
@@ -121,8 +127,13 @@ func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, 
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if cfg.Cloud.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	token, err := provider.GetAccessToken()
+	if err != nil {
+		log.Printf("[poller] error getting access token for ref=%s: %v", referenceNumber, err)
+		return
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -135,7 +146,7 @@ func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, 
 	log.Printf("[poller] reported result for ref=%s status=%s http=%s", referenceNumber, status, resp.Status)
 }
 
-func pollPendingPayments(cfg *config.Config, xmlInOrderDir string) {
+func pollPendingPayments(cfg *config.Config, provider auth.TokenProvider, xmlInOrderDir string) {
 	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	locationID := cfg.LocationID
 	if locationID == "" {
@@ -154,8 +165,13 @@ func pollPendingPayments(cfg *config.Config, xmlInOrderDir string) {
 		log.Printf("[poller] error building request: %v", err)
 		return
 	}
-	if cfg.Cloud.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	token, err := provider.GetAccessToken()
+	if err != nil {
+		log.Printf("[poller] error getting access token: %v", err)
+		return
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -192,15 +208,15 @@ func pollPendingPayments(cfg *config.Config, xmlInOrderDir string) {
 		}
 		if err := ordering.WritePaymentXML(payReq, xmlInOrderDir); err != nil {
 			log.Printf("[poller] error writing payment XML for ref=%s: %v", payReq.ReferenceNumber, err)
-			go putPaymentResult(cfg, payReq.ReferenceNumber, "failed", err.Error())
+			go putPaymentResult(cfg, provider, payReq.ReferenceNumber, "failed", err.Error())
 		} else {
 			log.Printf("[poller] wrote payment XML for ref=%s", payReq.ReferenceNumber)
-			go reportPaymentResult(cfg, payReq.ReferenceNumber, xmlInOrderDir)
+			go reportPaymentResult(cfg, provider, payReq.ReferenceNumber, xmlInOrderDir)
 		}
 	}
 }
 
-func reportPaymentResult(cfg *config.Config, referenceNumber string, xmlDir string) {
+func reportPaymentResult(cfg *config.Config, provider auth.TokenProvider, referenceNumber string, xmlDir string) {
 	deadline := time.Now().Add(pollerConfirmTimeout)
 	for time.Now().Before(deadline) {
 		conf, confFile, err := ordering.FindConfirmation(xmlDir, referenceNumber)
@@ -214,20 +230,20 @@ func reportPaymentResult(cfg *config.Config, referenceNumber string, xmlDir stri
 				if conf.Transaction.Error != nil {
 					errText = conf.Transaction.Error.Text
 				}
-				putPaymentResult(cfg, referenceNumber, "failed", errText)
+				putPaymentResult(cfg, provider, referenceNumber, "failed", errText)
 				return
 			}
 
-			putPaymentResult(cfg, referenceNumber, "paid", "")
+			putPaymentResult(cfg, provider, referenceNumber, "paid", "")
 			return
 		}
 		time.Sleep(pollerConfirmInterval)
 	}
 
-	putPaymentResult(cfg, referenceNumber, "failed", fmt.Sprintf("timeout: no confirmation from POSitouch after %.0fs", pollerConfirmTimeout.Seconds()))
+	putPaymentResult(cfg, provider, referenceNumber, "failed", fmt.Sprintf("timeout: no confirmation from POSitouch after %.0fs", pollerConfirmTimeout.Seconds()))
 }
 
-func putPaymentResult(cfg *config.Config, referenceNumber, status, errMsg string) {
+func putPaymentResult(cfg *config.Config, provider auth.TokenProvider, referenceNumber, status, errMsg string) {
 	locationID := cfg.LocationID
 	if locationID == "" {
 		locationID = cfg.Location.Name
@@ -256,8 +272,13 @@ func putPaymentResult(cfg *config.Config, referenceNumber, status, errMsg string
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if cfg.Cloud.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+cfg.Cloud.APIKey)
+	token, err := provider.GetAccessToken()
+	if err != nil {
+		log.Printf("[poller] error getting access token for ref=%s: %v", referenceNumber, err)
+		return
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := http.DefaultClient.Do(req)
