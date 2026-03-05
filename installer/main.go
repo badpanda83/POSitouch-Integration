@@ -102,7 +102,7 @@ func runInstall() {
 	if answer == "y" || answer == "yes" {
 		agentExe := findAgentBinary(cfg)
 		if agentExe == "" {
-			// Try default name — the service binary path needs to be absolute.
+			// Try default name next to the installer binary.
 			exe, err := os.Executable()
 			if err == nil {
 				agentExe = filepath.Join(filepath.Dir(exe), "rooam-pos-agent.exe")
@@ -110,10 +110,25 @@ func runInstall() {
 				agentExe = "rooam-pos-agent.exe"
 			}
 		}
-		configPath, err := filepath.Abs(config.DefaultConfigPath)
-		if err != nil {
-			configPath = config.DefaultConfigPath
+
+		// The SCM launches services with C:\Windows\System32 as its working
+		// directory, so the agent path MUST be absolute — a relative path will
+		// cause "The system cannot find the file specified." at start time.
+		absAgentExe, err := filepath.Abs(agentExe)
+		if err == nil {
+			agentExe = absAgentExe
 		}
+
+		// Resolve the config path to an absolute path for the same reason.
+		configPath := config.DefaultConfigPath
+		absConfigPath, err := filepath.Abs(configPath)
+		if err == nil {
+			configPath = absConfigPath
+		}
+
+		fmt.Printf("[install] agent binary : %s\n", agentExe)
+		fmt.Printf("[install] config path  : %s\n", configPath)
+
 		if err := installService(agentExe, configPath); err != nil {
 			fmt.Fprintf(os.Stderr, "service install failed: %v\n", err)
 			os.Exit(1)
