@@ -23,7 +23,6 @@ import (
 	micros3700driver "github.com/badpanda83/POSitouch-Integration/driver/micros3700"
 	positouchdriver "github.com/badpanda83/POSitouch-Integration/driver/positouch"
 	"github.com/badpanda83/POSitouch-Integration/entities"
-	"github.com/badpanda83/POSitouch-Integration/ordering"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
@@ -284,16 +283,41 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
 
-	xmlInOrderDir := cfg.XMLInOrderDir
-	xmlDir := cfg.XMLDir
-	xmlCloseDir := cfg.XMLCloseDir
 	http.HandleFunc("/api/v1/tickets", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		log.Printf("[orders] incoming order request from %s", r.RemoteAddr)
-		ordering.CreateTicket(w, r, xmlInOrderDir, xmlDir, xmlCloseDir)
+
+		var req entities.CreateOrderRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(entities.CreateOrderErrorResponse{
+				Error: "invalid request body: " + err.Error(),
+			})
+			return
+		}
+
+		ticket, err := posDriver.CreateOrder(req)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(w).Encode(entities.CreateOrderErrorResponse{
+				Error:           err.Error(),
+				ReferenceNumber: req.ReferenceNumber,
+			})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(entities.CreateOrderResponse{
+			Status:          "created",
+			ReferenceNumber: req.ReferenceNumber,
+			Ticket:          ticket,
+		})
 	})
 
 	go func() {
