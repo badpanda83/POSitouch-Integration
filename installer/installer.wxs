@@ -26,6 +26,7 @@
     <!-- Properties set during install -->
     <Property Id="INSTALLDIR" Value="C:\Program Files\Rooam\POSAgent\" />
     <Property Id="LOCATION_NAME"    Admin="yes" />
+    <Property Id="LOCATION_ID"      Admin="yes" />
     <Property Id="LOCATION_ADDRESS" Admin="yes" />
     <Property Id="LOCATION_PHONE"   Admin="yes" />
     <Property Id="LOCATION_EMAIL"   Admin="yes" />
@@ -99,7 +100,7 @@
     <CustomAction
       Id="CA_WriteConfig"
       Directory="INSTALLDIR"
-      ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -location-name &quot;[LOCATION_NAME]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -spcwin-path &quot;[SPCWIN_PATH]&quot; -xml-dir &quot;[XML_DIR]&quot; -xml-close-dir &quot;[XML_CLOSE_DIR]&quot; -xml-inorder-dir &quot;[XML_INORDER_DIR]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
+      ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -spcwin-path &quot;[SPCWIN_PATH]&quot; -xml-dir &quot;[XML_DIR]&quot; -xml-close-dir &quot;[XML_CLOSE_DIR]&quot; -xml-inorder-dir &quot;[XML_INORDER_DIR]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
       Execute="deferred"
       Return="check"
       Impersonate="no" />
@@ -119,7 +120,53 @@
     </InstallExecuteSequence>
 
     <!-- UI -->
-    <ui:WixUI Id="WixUI_Minimal" />
+    <UI Id="RooamUI">
+      <UIRef Id="WixUI_Common" />
+
+      <TextStyle Id="WixUI_Font_Normal"  FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger"  FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title"   FaceName="Tahoma" Size="9" Bold="yes" />
+      <TextStyle Id="WixUI_Font_Smaller" FaceName="Tahoma" Size="7" />
+
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="WixUI_Mode"    Value="Full" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+      <DialogRef Id="WelcomeDlg" />
+      <DialogRef Id="VerifyReadyDlg" />
+      <DialogRef Id="RooamConfigDlg" />
+      <DialogRef Id="POSPathsDlg" />
+
+      <!-- WelcomeDlg: Next goes to RooamConfigDlg -->
+      <Publish Dialog="WelcomeDlg" Control="Next"   Event="NewDialog"   Value="RooamConfigDlg" Condition="1" />
+      <Publish Dialog="WelcomeDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg"       Condition="1" />
+
+      <!-- RooamConfigDlg: Back goes to WelcomeDlg -->
+      <Publish Dialog="RooamConfigDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Condition="1" />
+
+      <!-- VerifyReadyDlg: Back goes to POSPathsDlg -->
+      <Publish Dialog="VerifyReadyDlg" Control="Back"    Event="NewDialog"  Value="POSPathsDlg" Condition="1" />
+      <Publish Dialog="VerifyReadyDlg" Control="Install" Event="EndDialog"  Value="Return"      Condition="1" />
+      <Publish Dialog="VerifyReadyDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg"  Condition="1" />
+
+      <!-- ResumeDlg -->
+      <Publish Dialog="ResumeDlg" Control="Install" Event="EndDialog"   Value="Return"    Condition="1" />
+      <Publish Dialog="ResumeDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+
+      <!-- Install UI sequence -->
+      <InstallUISequence>
+        <Show Dialog="WelcomeDlg"  After="CostFinalize" Condition="NOT Installed" />
+        <Show Dialog="ResumeDlg"   After="CostFinalize" Condition="Installed AND RESUME" />
+        <Show Dialog="ProgressDlg" After="CostFinalize" Condition="Installed AND NOT RESUME" />
+      </InstallUISequence>
+    </UI>
 
   </Package>
 </Wix>
