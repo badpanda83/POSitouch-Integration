@@ -11,6 +11,7 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 - [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
 - [Building](#building)
+- [Installer](#installer)
 - [Running](#running)
 - [Project Structure](#project-structure)
 - [Data Sources](#data-sources)
@@ -149,7 +150,54 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o rooam-pos-a
 
 ---
 
-## Running
+## Installer
+
+A standalone installer CLI (`installer.exe`) handles deployment of the POS agent on a Windows machine. Build it with:
+
+```powershell
+go build -o installer.exe ./installer/
+```
+
+### Subcommands
+
+| Command | Description |
+|---|---|
+| `install` | Run preflight checks, configuration wizard, connectivity test, and register the agent as a Windows Service |
+| `uninstall` | Stop and remove the POS agent Windows Service (optionally deletes config) |
+| `configure` | Re-run the configuration wizard to update `rooam_config.json` |
+| `check` | Run pre-flight and connectivity checks only (no installation) |
+| `activate` | OAuth activation gate — stub, not yet available (Phase 3b) |
+| `version` | Print version information |
+
+### Usage
+
+```powershell
+# Full installation (guided)
+.\installer.exe install
+
+# Check configuration and connectivity without installing
+.\installer.exe check
+
+# Update configuration
+.\installer.exe configure
+
+# Remove the service
+.\installer.exe uninstall
+
+# Print version
+.\installer.exe version
+```
+
+The `install` subcommand:
+1. Runs initial pre-flight checks (OS, admin privileges, agent binary)
+2. Launches the interactive configuration wizard to generate `rooam_config.json`
+3. Runs full pre-flight checks against the generated config
+4. Runs connectivity checks (cloud endpoint, auth, POS reachability)
+5. Optionally installs and starts the agent as an auto-start Windows Service (`RooamPOSAgent`)
+
+---
+
+
 
 ```powershell
 .\rooam-pos-agent.exe -config .\rooam_config.json
@@ -189,6 +237,13 @@ POSitouch-Integration/
 ├── poller.go            # pollPendingOrders/Payments, reportOrderResult/PaymentResult, putOrderResult/PaymentResult
 ├── config/
 │   └── config.go        # rooam_config.json loader
+├── installer/
+│   ├── main.go          # Installer entry point — subcommand dispatch
+│   ├── preflight.go     # Pre-installation checks
+│   ├── wizard.go        # Interactive config builder (generates rooam_config.json)
+│   ├── service.go       # Windows Service registration/removal (build-tagged)
+│   ├── connectivity.go  # Cloud + POS reachability tests
+│   └── activate.go      # OAuth activation stub (Phase 3b)
 ├── ordering/
 │   └── ordering.go      # CreateTicket HTTP handler, WriteOrderXML, FindConfirmation
 ├── positouch/

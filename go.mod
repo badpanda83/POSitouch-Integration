@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/badpanda83/POSitouch-Integration/positouch v0.1.0
 	github.com/go-sql-driver/mysql v1.8.1
+	golang.org/x/sys v0.41.0
 )
 
 require (
