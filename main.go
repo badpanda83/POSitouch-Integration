@@ -1,4 +1,4 @@
-// POSitouch Integration Agent â€” reads POSitouch DBF files every 30 minutes,
+// POSitouch Integration Agent — reads POSitouch DBF files every 30 minutes,
 // caches the data in memory, and exposes it via REST endpoints.
 package main
 
@@ -29,7 +29,7 @@ import (
 const (
 	appName    = "rooam-pos-agent"
 	appVersion = "1.0.0"
-	exportDir  = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
+	exportDir  = "C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export"
 	tablesXML  = exportDir + `\set1.xml`
 )
 
@@ -44,10 +44,10 @@ func main() {
 	flag.Parse()
 
 	log.SetFlags(log.LstdFlags | log.LUTC)
-	fmt.Printf("â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—\n")
-	fmt.Printf("â•‘  %-38sâ•‘\n", fmt.Sprintf("%s v%s", appName, appVersion))
-	fmt.Printf("â•‘  %-38sâ•‘\n", "POSitouch Integration Agent")
-	fmt.Printf("â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•\n\n")
+	fmt.Printf("╔═══════════════════════════════════════════╗\n")
+	fmt.Printf("║  %-38s║\n", fmt.Sprintf("%s v%s", appName, appVersion))
+	fmt.Printf("║  %-38s║\n", "POSitouch Integration Agent")
+	fmt.Printf("╚═══════════════════════════════════════════╝\n\n")
 
 	log.Printf("[main] config path : %s", *configPath)
 
@@ -75,7 +75,7 @@ func main() {
 
 	locationID := cfg.Location.Name
 	// FIX: trim any trailing slash from the configured endpoint to prevent
-	// double-slash URLs like ".../pos-data//store1/categories" â†’ 400 Bad Request
+	// double-slash URLs like ".../pos-data//store1/categories" → 400 Bad Request
 	apiBaseURL := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	// TODO(phase-3b): when AuthMode == "oauth", construct auth.OAuthProvider instead.
 	var tokenProvider auth.TokenProvider = &auth.StaticKeyProvider{Key: cfg.Cloud.APIKey}
@@ -223,7 +223,7 @@ func main() {
 				return
 			}
 			store.data[location] = data
-			log.Printf("[server] received data for location %q â€” cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d tickets=%d menu_items=%d categories=%d modifiers=%d",
+			log.Printf("[server] received data for location %q — cost_centers=%d tenders=%d employees=%d tables=%d order_types=%d tickets=%d menu_items=%d categories=%d modifiers=%d",
 				location, len(data.CostCenters), len(data.Tenders), len(data.Employees), len(data.Tables), len(data.OrderTypes), len(data.CurrentTickets), len(data.MenuItems), len(data.Categories), len(data.Modifiers))
 			w.WriteHeader(http.StatusOK)
 			return
@@ -334,10 +334,23 @@ func main() {
 	}()
 	log.Println("[agent] polling Railway for pending orders every 5s")
 
+	// --- WINDOWS SERVICE SUPPORT ---
+	// When the binary is started by the Windows SCM (i.e. as a service),
+	// runAsWindowsService registers the SCM handler and returns a stop channel
+	// that is closed when the SCM sends Stop/Shutdown.  When run interactively,
+	// it returns false and we fall back to the classic SIGINT/SIGTERM path.
+	if ranAsSvc, svcStop := runAsWindowsService(appName); ranAsSvc {
+		log.Println("[main] running as Windows service — waiting for SCM stop signal")
+		<-svcStop
+		log.Println("[main] SCM stop received — shutting down")
+		return
+	}
+
+	// Wait for an interrupt signal to gracefully shut down the application
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
-	log.Printf("[main] received signal %s â€” shutting down", sig)
+	log.Printf("[main] received signal %s — shutting down", sig)
 	log.Println("[main] Agent stopped")
 }
 

@@ -16,7 +16,16 @@ const serviceName = "RooamPOSAgent"
 const serviceDisplayName = "Rooam POS Agent"
 const serviceDescription = "Rooam POS Integration Agent — syncs POS data to the cloud"
 
-// installService creates and starts the Windows service.
+// quotePath wraps a path in double-quotes so that the Windows SCM handles
+// paths that contain spaces correctly.  The SCM uses the raw ImagePath value
+// as a command-line, so each token (exe and arguments) must be individually
+// quoted when it may contain spaces.
+func quotePath(p string) string {
+	return `"` + p + `"`
+}
+
+// installService creates and starts the Windows service, then polls until it
+// reaches svc.Running (or times out after 30 seconds).
 func installService(agentPath, configPath string) error {
 	m, err := mgr.Connect()
 	if err != nil {
@@ -24,7 +33,9 @@ func installService(agentPath, configPath string) error {
 	}
 	defer m.Disconnect()
 
-	binaryPathName := agentPath + " -config " + configPath
+	// Quote both the exe path and the config path argument so that paths
+	// containing spaces are handled correctly by the SCM.
+	binaryPathName := quotePath(agentPath) + " -config " + quotePath(configPath)
 
 	s, err := m.CreateService(serviceName, binaryPathName, mgr.Config{
 		DisplayName: serviceDisplayName,
@@ -52,12 +63,34 @@ func installService(agentPath, configPath string) error {
 		fmt.Printf("[service] warning: could not install event log source: %v\n", err)
 	}
 
+	// Ask the SCM to start the service.
 	if err := s.Start(); err != nil {
 		return fmt.Errorf("service: start service: %w", err)
 	}
 
-	fmt.Printf("[service] Service %q installed and started\n", serviceName)
-	return nil
+	// Poll until the service reaches Running or we time out.
+	fmt.Printf("[service] Waiting for service %q to start", serviceName)
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		status, err := s.Query()
+		if err != nil {
+			return fmt.Errorf("service: query status after start: %w", err)
+		}
+		if status.State == svc.Running {
+			fmt.Println() // newline after the dots
+			fmt.Printf("[service] Service %q is running\n", serviceName)
+			return nil
+		}
+		if status.State != svc.StartPending {
+			fmt.Println()
+			return fmt.Errorf("service: unexpected state after start: %d", status.State)
+		}
+		fmt.Print(".")
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	fmt.Println()
+	return fmt.Errorf("service: timed out waiting for %q to reach Running state", serviceName)
 }
 
 // uninstallService stops and removes the Windows service.
