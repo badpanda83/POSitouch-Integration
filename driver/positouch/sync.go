@@ -1,25 +1,23 @@
 package positouchdriver
 
 import (
-	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 
 	"github.com/badpanda83/POSitouch-Integration/entities"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
-const (
-	exportDir = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export`
-	tablesXML = exportDir + `\set1.xml`
-)
-
 // SyncEntities reads all POSitouch master data and returns it as a canonical Snapshot.
 func (d *Driver) SyncEntities() (*entities.Snapshot, error) {
 	log.Printf("[positouch] SyncEntities: refreshing master data")
 
+	exportDir := filepath.Join(d.cfg.InstallDir, "Export")
+	tablesXML := filepath.Join(exportDir, "set1.xml")
+
 	// Regenerate and copy set1.xml so table data is fresh.
-	if err := positouch.RunWExportAndCopySet1(); err != nil {
+	if err := positouch.RunWExportAndCopySet1(tablesXML); err != nil {
 		log.Printf("[positouch][WARN] WExport failed, tables may be stale: %v", err)
 	} else {
 		log.Printf("[positouch] WExport completed, set1.xml refreshed")
@@ -50,7 +48,7 @@ func (d *Driver) SyncEntities() (*entities.Snapshot, error) {
 		log.Printf("[positouch][WARN] ParseTablesFromSet1XML: %v", tableErr)
 	}
 
-	menuXMLPath := fmt.Sprintf(`%s\menu_items.xml`, exportDir)
+	menuXMLPath := filepath.Join(exportDir, "menu_items.xml")
 	rawMenuItems, err := positouch.ParseMenuXML(menuXMLPath)
 	if err != nil {
 		log.Printf("[positouch][WARN] ParseMenuXML: %v", err)

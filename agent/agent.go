@@ -21,14 +21,11 @@ import (
 // RefreshInterval is the time between successive data pulls.
 const RefreshInterval = 30 * time.Minute
 
-// ExportDir is where the XML menu and category files are located.
-const ExportDir = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
-
 // --- Robust WExport runner with logging ---
 
 var wexportMu sync.Mutex
 
-func runWExportAndCopyForTables() error {
+func runWExportAndCopyForTables(exportDir string) error {
 	wexportMu.Lock()
 	defer wexportMu.Unlock()
 
@@ -60,8 +57,8 @@ func runWExportAndCopyForTables() error {
 	}
 
 	// 2. Copy set1.xml to Export folder
-	src := "C:\\SC\\set1.xml"
-	dst := "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export\\set1.xml"
+	src := positouch.Set1XMLSrc
+	dst := filepath.Join(exportDir, "set1.xml")
 	in, err := os.Open(src)
 	if err != nil {
 		log.Printf("[WExport][ERROR] reading %s: %v", src, err)
@@ -138,6 +135,11 @@ func (a *Agent) refresh() {
 	xmlOpenDir := a.cfg.XMLDir
 	xmlCloseDir := a.cfg.XMLCloseDir
 
+	exportDir := filepath.Join(a.cfg.InstallDir, "Export")
+	if err := os.MkdirAll(exportDir, 0755); err != nil {
+		log.Printf("[agent] WARNING: could not create Export dir %s: %v", exportDir, err)
+	}
+
 	cacheDir := filepath.Join(a.cfg.InstallDir, "data_cache")
 	log.Printf("[agent] reading DBF files from %s", dbfDir)
 	log.Printf("[agent] reading XML ticket files from %s and %s", xmlOpenDir, xmlCloseDir)
@@ -163,12 +165,12 @@ func (a *Agent) refresh() {
 	cache.WriteEmployeesToCache(emptyIfNil(employees), filepath.Join(cacheDir, "employees.cache"))
 
 	// --- Improved: WExport runner logs every detail ---
-	if err := runWExportAndCopyForTables(); err != nil {
+	if err := runWExportAndCopyForTables(exportDir); err != nil {
 		log.Printf("[agent] ERROR: failed to run WExport/copy set1.xml: %v", err)
 	} else {
 		log.Printf("[agent] set1.xml was regenerated and copied to Export dir successfully.")
 	}
-	tables, err := positouch.ParseTablesFromSet1XML("C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export\\set1.xml")
+	tables, err := positouch.ParseTablesFromSet1XML(filepath.Join(exportDir, "set1.xml"))
 	if err != nil {
 		log.Printf("[sync][WARN] Unable to load tables: %v", err)
 		tables = nil
@@ -189,9 +191,9 @@ func (a *Agent) refresh() {
 	cache.WriteTicketsToCache(emptyIfNil(allTickets), filepath.Join(cacheDir, "tickets.cache"))
 	log.Printf("[agent] OMNIVORE_OPEN: cached %d tickets", len(allTickets))
 
-	// ----- MENU ITEMS (from menu_items.xml in ExportDir) -----
+	// ----- MENU ITEMS (from menu_items.xml in exportDir) -----
 	menuItems := []positouch.MenuItem{}
-	menuXMLPath := filepath.Join(ExportDir, "menu_items.xml")
+	menuXMLPath := filepath.Join(exportDir, "menu_items.xml")
 	log.Printf("[agent] Attempting to load menu items from: %s", menuXMLPath)
 	menuExport, err := positouch.ParseMenuXML(menuXMLPath)
 	if err != nil {
@@ -208,9 +210,9 @@ func (a *Agent) refresh() {
 	}
 	cache.WriteMenuItemsToCache(emptyIfNil(menuItems), filepath.Join(cacheDir, "menu_items.json"))
 
-	// ----- CATEGORIES (from menu_categories.xml in ExportDir) -----
+	// ----- CATEGORIES (from menu_categories.xml in exportDir) -----
 	categories := []positouch.Category{}
-	catXMLPath := filepath.Join(ExportDir, "menu_categories.xml")
+	catXMLPath := filepath.Join(exportDir, "menu_categories.xml")
 	log.Printf("[agent] [DEBUG] Attempting to load categories from: %s", catXMLPath)
 	cats, err := positouch.ParseMenuCategories(catXMLPath)
 	if err != nil {
@@ -230,9 +232,9 @@ func (a *Agent) refresh() {
 	}
 	cache.WriteCategoriesToCache(emptyIfNil(categories), filepath.Join(cacheDir, "categories.json"))
 
-	// ----- MODIFIERS (from menu_modifiers.xml in ExportDir, if available) -----
+	// ----- MODIFIERS (from menu_modifiers.xml in exportDir, if available) -----
 	modifiers := []positouch.Modifier{}
-	modXMLPath := filepath.Join(ExportDir, "menu_modifiers.xml")
+	modXMLPath := filepath.Join(exportDir, "menu_modifiers.xml")
 	if _, err := os.Stat(modXMLPath); err == nil {
 		log.Printf("[agent] Attempting to load modifiers from: %s", modXMLPath)
 		mods, err := positouch.ParseMenuModifiers(modXMLPath)

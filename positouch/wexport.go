@@ -16,17 +16,16 @@ WExportEXE      = `C:\SC\WExport.EXE`
 WExportDir      = `C:\SC\`
 WExportManifest = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\wexport_layout_manifest.xml`
 Set1XMLSrc      = `C:\SC\set1.xml`
-Set1XMLDst      = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export\set1.xml`
 )
 
 var wexportMu sync.Mutex
 
 // RunWExportAndCopySet1 runs WExport.exe to regenerate set1.xml then copies
-// it to the Export folder so no other process can overwrite it before we read it.
+// it to dst so no other process can overwrite it before we read it.
 // A package-level mutex ensures only one WExport.exe runs at a time; concurrent
 // callers block until the current run finishes. A 60-second context timeout
 // automatically kills a hung WExport.exe so the mutex is never held indefinitely.
-func RunWExportAndCopySet1() error {
+func RunWExportAndCopySet1(dst string) error {
 wexportMu.Lock()
 defer wexportMu.Unlock()
 
@@ -57,9 +56,9 @@ return err
 }
 defer in.Close()
 
-out, err := os.Create(Set1XMLDst)
+out, err := os.Create(dst)
 if err != nil {
-log.Printf("[WExport][ERROR] creating %s: %v", Set1XMLDst, err)
+log.Printf("[WExport][ERROR] creating %s: %v", dst, err)
 return err
 }
 defer out.Close()
@@ -68,6 +67,6 @@ if _, err = io.Copy(out, in); err != nil {
 log.Printf("[WExport][ERROR] copying set1.xml: %v", err)
 return err
 }
-log.Printf("[WExport] set1.xml copied to %s", Set1XMLDst)
+log.Printf("[WExport] set1.xml copied to %s", dst)
 return nil
 }
