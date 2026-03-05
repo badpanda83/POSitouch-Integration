@@ -24,7 +24,9 @@ $RepoRoot     = Split-Path -Parent $InstallerDir
 $OutDir       = Join-Path $InstallerDir 'out'
 $AgentExe     = Join-Path $OutDir 'POSitouch-Integration.exe'
 $MsiOut       = Join-Path $OutDir 'RooamPOSAgent-Setup.msi'
-$WxsFile      = Join-Path $InstallerDir 'installer.wxs'
+$WxsFile        = Join-Path $InstallerDir 'installer.wxs'
+$RooamConfigDlg = Join-Path $InstallerDir 'RooamConfigDlg.wxs'
+$POSPathsDlg    = Join-Path $InstallerDir 'POSPathsDlg.wxs'
 
 # ---------------------------------------------------------------------------
 # Ensure output directory exists
@@ -96,7 +98,10 @@ Then ensure the .NET global tools directory is in your PATH.
     exit 1
 }
 
-& wix build $WxsFile -o $MsiOut
+& wix build $WxsFile $RooamConfigDlg $POSPathsDlg `
+    -arch x64 `
+    -ext WixToolset.UI.wixext `
+    -o $MsiOut
 if ($LASTEXITCODE -ne 0) {
     Write-Error "[build] wix build failed (exit code $LASTEXITCODE)"
     exit 1

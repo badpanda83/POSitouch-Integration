@@ -7,7 +7,7 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
   <Fragment>
-    <ui:UI>
+    <UI>
       <Dialog Id="POSPathsDlg" Width="370" Height="270" Title="[ProductName] Setup">
 
         <!-- Banner -->
@@ -63,7 +63,7 @@
         </Control>
 
       </Dialog>
-    </ui:UI>
+    </UI>
   </Fragment>
 
 </Wix>
