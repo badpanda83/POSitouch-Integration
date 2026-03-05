@@ -144,12 +144,8 @@
       <DialogRef Id="RooamConfigDlg" />
       <DialogRef Id="POSPathsDlg" />
 
-      <!-- WelcomeDlg: Next goes to RooamConfigDlg -->
-      <Publish Dialog="WelcomeDlg" Control="Next"   Event="NewDialog"   Value="RooamConfigDlg" Condition="1" />
-      <Publish Dialog="WelcomeDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg"       Condition="1" />
-
-      <!-- RooamConfigDlg: Back goes to WelcomeDlg (also set in RooamConfigDlg.wxs) -->
-      <Publish Dialog="RooamConfigDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Condition="1" />
+      <!-- WelcomeDlg: override Next to go to RooamConfigDlg instead of the default -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RooamConfigDlg" Condition="1" />
 
       <!-- VerifyReadyDlg: Back goes to POSPathsDlg -->
       <Publish Dialog="VerifyReadyDlg" Control="Back"    Event="NewDialog"   Value="POSPathsDlg" Condition="1" />
