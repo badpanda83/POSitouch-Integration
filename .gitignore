@@ -3,6 +3,7 @@ POSitouch-Integration
 POSitouch-Integration.exe
 *.exe
 installer/out/
+config_writer
 
 # Cache files
 rooam_cache.json
