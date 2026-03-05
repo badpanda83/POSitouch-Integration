@@ -50,13 +50,9 @@ func main() {
 
 	// If started by the Windows SCM, runAsWindowsService starts the SCM
 	// dispatch loop in a goroutine and returns (true, stopCh).
-	// We block on stopCh until the SCM sends Stop/Shutdown, then exit cleanly.
-	isSvc, stop := runAsWindowsService("RooamPOSAgent")
-	if isSvc {
-		<-stop
-		log.Println("[main] SCM stop received — shutting down")
-		os.Exit(0)
-	}
+	// stopCh is closed when the SCM sends Stop/Shutdown; it is used only for
+	// graceful shutdown alongside OS signals — agent logic always runs below.
+	_, stopCh := runAsWindowsService("RooamPOSAgent")
 
 	log.Printf("[main] config path : %s", *configPath)
 
@@ -312,13 +308,22 @@ func main() {
 		}
 	}()
 
-	// --- GRACEFUL SHUTDOWN (interactive mode only) ---
-	// In service mode the <-stop block above owns the lifecycle and returns
-	// before we get here.
+	// --- GRACEFUL SHUTDOWN ---
+	// Wait for an OS signal (interactive) or an SCM Stop/Shutdown (service mode).
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	<-sigCh
-	log.Println("[main] received OS signal — shutting down")
+
+	reason := "OS signal"
+	if stopCh != nil {
+		select {
+		case <-sigCh:
+		case <-stopCh:
+			reason = "SCM stop"
+		}
+	} else {
+		<-sigCh
+	}
+	log.Printf("[main] %s received — shutting down", reason)
 }
 
 // countItems returns the length of a slice passed as interface{}. 
