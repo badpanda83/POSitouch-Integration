@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  RooamConfigDlg.wxs - Custom WiX v4 dialog: Rooam configuration
+  Collects Location Name, Location ID, and Cloud API Key from the installer user.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Fragment>
+    <ui:UI>
+      <Dialog Id="RooamConfigDlg" Width="370" Height="270" Title="[ProductName] Setup">
+
+        <!-- Banner -->
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="yes" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+
+        <!-- Title -->
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}Rooam Cloud Configuration</Text>
+        </Control>
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Enter your Rooam account credentials for this location.</Text>
+        </Control>
+
+        <!-- Location Name -->
+        <Control Id="LocationNameLabel" Type="Text" X="25" Y="58" Width="120" Height="10">
+          <Text>&amp;Location Name (required):</Text>
+        </Control>
+        <Control Id="LocationNameEdit" Type="Edit" X="25" Y="70" Width="320" Height="18" Property="LOCATION_NAME" Text="{80}" />
+
+        <!-- Location ID -->
+        <Control Id="LocationIdLabel" Type="Text" X="25" Y="96" Width="200" Height="10">
+          <Text>&amp;Location ID (leave blank to use Location Name):</Text>
+        </Control>
+        <Control Id="LocationIdEdit" Type="Edit" X="25" Y="108" Width="320" Height="18" Property="LOCATION_ID" Text="{80}" />
+
+        <!-- API Key -->
+        <Control Id="ApiKeyLabel" Type="Text" X="25" Y="134" Width="120" Height="10">
+          <Text>&amp;Cloud API Key (required):</Text>
+        </Control>
+        <Control Id="ApiKeyEdit" Type="Edit" X="25" Y="146" Width="320" Height="18" Property="API_KEY" Password="yes" Text="{128}" />
+
+        <!-- Validation message -->
+        <Control Id="RequiredNote" Type="Text" X="25" Y="172" Width="320" Height="10" Transparent="yes">
+          <Text>{\WixUI_Font_Smaller}Location Name and API Key are required to continue.</Text>
+        </Control>
+
+        <!-- Bottom line -->
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <!-- Buttons -->
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&lt; &amp;Back">
+          <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
+        </Control>
+
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next >">
+          <!-- Only advance if both required fields are filled -->
+          <Publish Event="NewDialog" Value="POSPathsDlg" Order="1">LOCATION_NAME AND API_KEY</Publish>
+          <Publish Event="SpawnDialog" Value="ValidateProductID" Order="2">NOT (LOCATION_NAME AND API_KEY)</Publish>
+        </Control>
+
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+
+      </Dialog>
+    </ui:UI>
+  </Fragment>
+
+</Wix>
