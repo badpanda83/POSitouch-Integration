@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 permissions:
   contents: write
@@ -20,12 +20,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21"
+          go-version: '1.21'
 
       - name: Set up .NET (required for WiX v4)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.x"
+          dotnet-version: '8.x'
 
       - name: Extract version from tag
         id: version
@@ -56,7 +56,7 @@ jobs:
         run: |
           $version = "${{ steps.version.outputs.version }}"
           $wxs = Get-Content installer/installer.wxs -Raw
-          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$version`""
+          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=\"$version\""
           Set-Content installer/installer.wxs $wxs
 
       - name: Install WiX v4.0.5 and build MSI
@@ -82,11 +82,11 @@ jobs:
             ### Installation
             1. Download `RooamPOSAgent-Setup.msi` below
             2. Run the installer as Administrator
-            3. Follow the setup wizard — it will auto-detect your POSitouch paths
+            3. Follow the setup wizard -- it will auto-detect your POSitouch paths
 
             ### Requirements
             - Windows 10 / Windows 11
-            - POSitouch installed (typically at `C:\SC\`)
+            - POSitouch installed (typically at C:\SC\)
           draft: false
           prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
           files: installer/out/RooamPOSAgent-Setup.msi
