@@ -148,17 +148,13 @@
       <Publish Dialog="WelcomeDlg" Control="Next"   Event="NewDialog"   Value="RooamConfigDlg" Condition="1" />
       <Publish Dialog="WelcomeDlg" Control="Cancel" Event="SpawnDialog" Value="CancelDlg"       Condition="1" />
 
-      <!-- RooamConfigDlg: Back goes to WelcomeDlg -->
+      <!-- RooamConfigDlg: Back goes to WelcomeDlg (also set in RooamConfigDlg.wxs) -->
       <Publish Dialog="RooamConfigDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Condition="1" />
 
       <!-- VerifyReadyDlg: Back goes to POSPathsDlg -->
-      <Publish Dialog="VerifyReadyDlg" Control="Back"    Event="NewDialog"  Value="POSPathsDlg" Condition="1" />
-      <Publish Dialog="VerifyReadyDlg" Control="Install" Event="EndDialog"  Value="Return"      Condition="1" />
-      <Publish Dialog="VerifyReadyDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg"  Condition="1" />
-
-      <!-- ResumeDlg -->
-      <Publish Dialog="ResumeDlg" Control="Install" Event="EndDialog"   Value="Return"    Condition="1" />
-      <Publish Dialog="ResumeDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg" Condition="1" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back"    Event="NewDialog"   Value="POSPathsDlg" Condition="1" />
+      <Publish Dialog="VerifyReadyDlg" Control="Install" Event="EndDialog"   Value="Return"      Condition="1" />
+      <Publish Dialog="VerifyReadyDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg"   Condition="1" />
 
       <!-- Install UI sequence -->
       <InstallUISequence>
