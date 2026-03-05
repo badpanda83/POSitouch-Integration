@@ -343,7 +343,7 @@ func main() {
 		log.Println("[main] running as Windows service — waiting for SCM stop signal")
 		<-svcStop
 		log.Println("[main] SCM stop received — shutting down")
-		return
+		os.Exit(0)
 	}
 
 	// Wait for an interrupt signal to gracefully shut down the application
