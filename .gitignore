@@ -1,4 +1,5 @@
 *.exe
+installer/out/
 rooam_cache.json
 data_cache/*.cache
 
