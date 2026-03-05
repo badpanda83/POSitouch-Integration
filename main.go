@@ -56,7 +56,7 @@ func main() {
 	if isSvc {
 		<-stop
 		log.Println("[main] SCM stop received — shutting down")
-		return
+		os.Exit(0)
 	}
 
 	log.Printf("[main] config path : %s", *configPath)
