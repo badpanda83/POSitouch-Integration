@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -29,8 +30,6 @@ import (
 const (
 	appName    = "rooam-pos-agent"
 	appVersion = "1.0.0"
-	exportDir  = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export`
-	tablesXML  = exportDir + `\set1.xml`
 )
 
 var store = struct {
@@ -82,6 +81,12 @@ func main() {
 	log.Printf("[main] SC dir      : %s", cfg.SCDir)
 	log.Printf("[main] DBF dir     : %s", cfg.DBFDir)
 	log.Printf("[main] ALTDBF dir  : %s", cfg.AltDBFDir)
+
+	exportDir := filepath.Join(cfg.InstallDir, "Export")
+	if err := os.MkdirAll(exportDir, 0755); err != nil {
+		log.Printf("[main] WARNING: could not create Export dir %s: %v", exportDir, err)
+	}
+	log.Printf("[main] export dir  : %s", exportDir)
 
 	locationID := cfg.Location.Name
 	// FIX: trim any trailing slash from the configured endpoint to prevent
@@ -289,6 +294,15 @@ func main() {
 			json.NewEncoder(w).Encode(result)
 		})
 	}
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintln(w, `{"status":"ok"}`)
+	})
 
 	go func() {
 		port := ":8080"
