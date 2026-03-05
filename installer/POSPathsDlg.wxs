@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  POSPathsDlg.wxs - Custom WiX v4 dialog: POSitouch path configuration
+  Collects SPCWIN.EXE path and XML directory paths from the installer user.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Fragment>
+    <ui:UI>
+      <Dialog Id="POSPathsDlg" Width="370" Height="270" Title="[ProductName] Setup">
+
+        <!-- Banner -->
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="yes" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+
+        <!-- Title -->
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="340" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>{\WixUI_Font_Title}POSitouch Paths</Text>
+        </Control>
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="340" Height="15" Transparent="yes" NoPrefix="yes">
+          <Text>Confirm the paths to your POSitouch installation. Defaults are pre-filled.</Text>
+        </Control>
+
+        <!-- SPCWIN path -->
+        <Control Id="SpcwinLabel" Type="Text" X="25" Y="58" Width="200" Height="10">
+          <Text>&amp;Path to spcwin.exe:</Text>
+        </Control>
+        <Control Id="SpcwinEdit" Type="Edit" X="25" Y="70" Width="320" Height="18" Property="SPCWIN_PATH" Text="{260}" />
+
+        <!-- XML open dir -->
+        <Control Id="XmlDirLabel" Type="Text" X="25" Y="96" Width="200" Height="10">
+          <Text>&amp;Open Tickets XML Directory:</Text>
+        </Control>
+        <Control Id="XmlDirEdit" Type="Edit" X="25" Y="108" Width="320" Height="18" Property="XML_DIR" Text="{260}" />
+
+        <!-- XML close dir -->
+        <Control Id="XmlCloseDirLabel" Type="Text" X="25" Y="134" Width="200" Height="10">
+          <Text>&amp;Closed Tickets XML Directory:</Text>
+        </Control>
+        <Control Id="XmlCloseDirEdit" Type="Edit" X="25" Y="146" Width="320" Height="18" Property="XML_CLOSE_DIR" Text="{260}" />
+
+        <!-- XML inorder dir -->
+        <Control Id="XmlInOrderDirLabel" Type="Text" X="25" Y="172" Width="200" Height="10">
+          <Text>&amp;Inbound Orders XML Directory:</Text>
+        </Control>
+        <Control Id="XmlInOrderDirEdit" Type="Edit" X="25" Y="184" Width="320" Height="18" Property="XML_INORDER_DIR" Text="{260}" />
+
+        <!-- Bottom line -->
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+
+        <!-- Buttons -->
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&lt; &amp;Back">
+          <Publish Event="NewDialog" Value="RooamConfigDlg">1</Publish>
+        </Control>
+
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next >">
+          <Publish Event="NewDialog" Value="VerifyReadyDlg">1</Publish>
+        </Control>
+
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
+          <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+        </Control>
+
+      </Dialog>
+    </ui:UI>
+  </Fragment>
+
+</Wix>
