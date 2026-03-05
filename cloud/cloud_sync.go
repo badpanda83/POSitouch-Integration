@@ -7,21 +7,23 @@ import (
 	"net/http"
 	"path/filepath"
 	"time"
+
+	"github.com/badpanda83/POSitouch-Integration/auth"
 )
 
 type Client struct {
-	Endpoint   string // Base API URL, e.g. https://your-cloud/api/v1/pos-data
-	APIKey     string
-	LocationID string
-	HTTP       *http.Client
+	Endpoint      string // Base API URL, e.g. https://your-cloud/api/v1/pos-data
+	TokenProvider auth.TokenProvider
+	LocationID    string
+	HTTP          *http.Client
 }
 
-func NewClient(endpoint, apiKey, locationID string) *Client {
+func NewClient(endpoint string, provider auth.TokenProvider, locationID string) *Client {
 	return &Client{
-		Endpoint:   endpoint,
-		APIKey:     apiKey,
-		LocationID: locationID,
-		HTTP:       &http.Client{Timeout: 15 * time.Second},
+		Endpoint:      endpoint,
+		TokenProvider: provider,
+		LocationID:    locationID,
+		HTTP:          &http.Client{Timeout: 15 * time.Second},
 	}
 }
 
@@ -40,8 +42,12 @@ func (c *Client) SyncEntityCache(entity, cacheDir string) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.APIKey != "" {
-		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	token, err := c.TokenProvider.GetAccessToken()
+	if err != nil {
+		return fmt.Errorf("get access token: %w", err)
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := c.HTTP.Do(req)

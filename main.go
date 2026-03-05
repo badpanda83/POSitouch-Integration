@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/badpanda83/POSitouch-Integration/auth"
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/driver"
@@ -77,7 +78,8 @@ func main() {
 	// FIX: trim any trailing slash from the configured endpoint to prevent
 	// double-slash URLs like ".../pos-data//store1/categories" â†’ 400 Bad Request
 	apiBaseURL := strings.TrimRight(cfg.Cloud.Endpoint, "/")
-	apiKey := cfg.Cloud.APIKey
+	// TODO(phase-3b): when AuthMode == "oauth", construct auth.OAuthProvider instead.
+	var tokenProvider auth.TokenProvider = &auth.StaticKeyProvider{Key: cfg.Cloud.APIKey}
 
 	// Kill any stale WExport.EXE processes left from previous runs.
 	// taskkill returns a non-zero exit code when no matching process exists,
@@ -134,7 +136,14 @@ func main() {
 				continue
 			}
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+apiKey)
+			token, err := tokenProvider.GetAccessToken()
+			if err != nil {
+				log.Printf("[sync] failed to get access token for %s: %v", entity, err)
+				continue
+			}
+			if token != "" {
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
@@ -176,7 +185,14 @@ func main() {
 			return
 		}
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
+		token, err := tokenProvider.GetAccessToken()
+		if err != nil {
+			log.Printf("[ticket_sync] failed to get access token: %v", err)
+			return
+		}
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			log.Printf("[ticket_sync] failed to upload tickets: %v", err)
@@ -287,8 +303,8 @@ func main() {
 
 	go func() {
 		for {
-			pollPendingOrders(cfg, posDriver)
-			pollPendingPayments(cfg, cfg.XMLInOrderDir)
+			pollPendingOrders(cfg, tokenProvider, posDriver)
+			pollPendingPayments(cfg, tokenProvider, cfg.XMLInOrderDir)
 			time.Sleep(5 * time.Second)
 		}
 	}()
