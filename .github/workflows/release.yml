@@ -33,15 +33,15 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION="${TAG#v}"
-          echo "tag=[0m$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=[0m$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Build Go binary (Windows amd64)
         shell: bash
         run: |
           mkdir -p installer/out
           GOOS=windows GOARCH=amd64 go build \
-            -ldflags "-X main.appVersion=[0m${{ steps.version.outputs.version }}" \
+            -ldflags "-X main.appVersion=${{ steps.version.outputs.version }}" \
             -o installer/out/POSitouch-Integration.exe \
             .
 
@@ -56,7 +56,7 @@ jobs:
         run: |
           $version = "${{ steps.version.outputs.version }}"
           $wxs = Get-Content installer/installer.wxs -Raw
-          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=[0m`$version`""
+          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$version`""
           Set-Content installer/installer.wxs $wxs
 
       - name: Install WiX and build MSI
