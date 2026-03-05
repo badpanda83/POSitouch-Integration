@@ -4,5 +4,5 @@
 
 package main
 
-// runAsWindowsService always returns false on non-Windows platforms.
-func runAsWindowsService(_ string) bool { return false }
+// runAsWindowsService always returns (false, nil) on non-Windows platforms.
+func runAsWindowsService(_ string) (bool, <-chan struct{}) { return false, nil }
