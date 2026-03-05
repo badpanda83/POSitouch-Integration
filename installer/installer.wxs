@@ -3,6 +3,7 @@
   installer.wxs - WiX Toolset v4 MSI definition for the Rooam POS Agent.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
      xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
 
   <Package
@@ -24,13 +25,13 @@
 
     <!-- Properties set during install -->
     <Property Id="INSTALLDIR" Value="C:\Program Files\Rooam\POSAgent\" />
-    <Property Id="LOCATION_NAME" />
-    <Property Id="LOCATION_ADDRESS" />
-    <Property Id="LOCATION_PHONE" />
-    <Property Id="LOCATION_EMAIL" />
-    <Property Id="EMPLOYEE_ID" />
-    <Property Id="TENDER_ID" />
-    <Property Id="API_KEY" Secure="yes" />
+    <Property Id="LOCATION_NAME"    Admin="yes" />
+    <Property Id="LOCATION_ADDRESS" Admin="yes" />
+    <Property Id="LOCATION_PHONE"   Admin="yes" />
+    <Property Id="LOCATION_EMAIL"   Admin="yes" />
+    <Property Id="EMPLOYEE_ID"      Admin="yes" />
+    <Property Id="TENDER_ID"        Admin="yes" />
+    <Property Id="API_KEY"          Secure="yes" />
     <Property Id="SPCWIN_PATH"     Value="C:\SC\spcwin.exe" />
     <Property Id="XML_DIR"         Value="C:\SC\XML" />
     <Property Id="XML_CLOSE_DIR"   Value="C:\SC\XMLCLOSE" />
@@ -118,9 +119,7 @@
     </InstallExecuteSequence>
 
     <!-- UI -->
-    <UI>
-      <UIRef Id="WixUI_Minimal" />
-    </UI>
+    <ui:WixUI Id="WixUI_Minimal" />
 
   </Package>
 </Wix>
