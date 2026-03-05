@@ -49,6 +49,16 @@ func main() {
 	fmt.Printf("║  %-38s║\n", "POSitouch Integration Agent")
 	fmt.Printf("╚═══════════════════════════════════════════╝\n\n")
 
+	// If started by the Windows SCM, runAsWindowsService starts the SCM
+	// dispatch loop in a goroutine and returns (true, stopCh).
+	// We block on stopCh until the SCM sends Stop/Shutdown, then exit cleanly.
+	isSvc, stop := runAsWindowsService("RooamPOSAgent")
+	if isSvc {
+		<-stop
+		log.Println("[main] SCM stop received — shutting down")
+		os.Exit(0)
+	}
+
 	log.Printf("[main] config path : %s", *configPath)
 
 	cfg, err := config.Load(*configPath)
@@ -248,170 +258,72 @@ func main() {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(locations)
-			return
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
 		}
 	})
 
-	http.HandleFunc("/api/v1/pos-data/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/api/v1/pos-data/")
-		parts := strings.SplitN(path, "/", 2)
-		if len(parts) == 1 && parts[0] != "" {
-			locationID := parts[0]
-			d, ok := store.data[locationID]
-			if !ok {
-				http.Error(w, "location not found", http.StatusNotFound)
+	// REST endpoints for individual entity types
+	entityEndpoints := map[string]func() (interface{}, error){
+		"/api/v1/employees":    func() (interface{}, error) { return posDriver.SyncEntities() },
+		"/api/v1/tickets":      func() (interface{}, error) { return posDriver.SyncTickets() },
+		"/api/v1/menu-items":   func() (interface{}, error) { s, e := posDriver.SyncEntities(); return s.MenuItems, e },
+		"/api/v1/tables":       func() (interface{}, error) { s, e := posDriver.SyncEntities(); return s.Tables, e },
+		"/api/v1/tenders":      func() (interface{}, error) { s, e := posDriver.SyncEntities(); return s.Tenders, e },
+		"/api/v1/cost-centers": func() (interface{}, error) { s, e := posDriver.SyncEntities(); return s.CostCenters, e },
+		"/api/v1/order-types":  func() (interface{}, error) { s, e := posDriver.SyncEntities(); return s.OrderTypes, e },
+	}
+	for path, fn := range entityEndpoints {
+		path, fn := path, fn
+		http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			result, err := fn()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(d)
-			return
-		}
-		if len(parts) == 2 {
-			locationID := parts[0]
-			entity := parts[1]
-			handleGetEntity(w, r, locationID, entity)
-			return
-		}
-		http.Error(w, "Bad path", http.StatusBadRequest)
-	})
-
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-	})
-
-	http.HandleFunc("/api/v1/tickets", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		log.Printf("[orders] incoming order request from %s", r.RemoteAddr)
-
-		var req entities.CreateOrderRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(entities.CreateOrderErrorResponse{
-				Error: "invalid request body: " + err.Error(),
-			})
-			return
-		}
-
-		ticket, err := posDriver.CreateOrder(req)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(w).Encode(entities.CreateOrderErrorResponse{
-				Error:           err.Error(),
-				ReferenceNumber: req.ReferenceNumber,
-			})
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(entities.CreateOrderResponse{
-			Status:          "created",
-			ReferenceNumber: req.ReferenceNumber,
-			Ticket:          ticket,
+			json.NewEncoder(w).Encode(result)
 		})
-	})
+	}
 
 	go func() {
-		log.Println("[server] starting API on :8080")
-		log.Fatal(http.ListenAndServe(":8080", nil))
-	}()
-
-	go func() {
-		for {
-			pollPendingOrders(cfg, tokenProvider, posDriver)
-			pollPendingPayments(cfg, tokenProvider, cfg.XMLInOrderDir)
-			time.Sleep(5 * time.Second)
+		port := ":8080"
+		log.Printf("[server] listening on %s", port)
+		if err := http.ListenAndServe(port, nil); err != nil {
+			log.Fatalf("[server] ListenAndServe: %v", err)
 		}
 	}()
-	log.Println("[agent] polling Railway for pending orders every 5s")
 
-	// --- WINDOWS SERVICE SUPPORT ---
-	// When the binary is started by the Windows SCM (i.e. as a service),
-	// runAsWindowsService registers the SCM handler and returns a stop channel
-	// that is closed when the SCM sends Stop/Shutdown.  When run interactively,
-	// it returns false and we fall back to the classic SIGINT/SIGTERM path.
-	if ranAsSvc, svcStop := runAsWindowsService(appName); ranAsSvc {
-		log.Println("[main] running as Windows service — waiting for SCM stop signal")
-		<-svcStop
-		log.Println("[main] SCM stop received — shutting down")
-		return
-	}
-
-	// Wait for an interrupt signal to gracefully shut down the application
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-sigs
-	log.Printf("[main] received signal %s — shutting down", sig)
-	log.Println("[main] Agent stopped")
+	// --- GRACEFUL SHUTDOWN (interactive mode only) ---
+	// In service mode the <-stop block above owns the lifecycle and returns
+	// before we get here.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	<-sigCh
+	log.Println("[main] received OS signal — shutting down")
 }
 
-func exportPath(filename string) string {
-	return fmt.Sprintf("%s\\%s", exportDir, filename)
-}
-
-func countItems(arr interface{}) int {
-	switch v := arr.(type) {
-	case []interface{}:
-		return len(v)
+// countItems returns the length of a slice passed as interface{}. 
+func countItems(v interface{}) int {
+	switch s := v.(type) {
 	case []entities.Employee:
-		return len(v)
+		return len(s)
 	case []entities.Table:
-		return len(v)
+		return len(s)
 	case []entities.Tender:
-		return len(v)
+		return len(s)
 	case []entities.CostCenter:
-		return len(v)
+		return len(s)
 	case []entities.OrderType:
-		return len(v)
-	case []entities.Ticket:
-		return len(v)
+		return len(s)
 	case []entities.MenuItem:
-		return len(v)
-	case []positouch.Category:
-		return len(v)
-	case []positouch.Modifier:
-		return len(v)
-	default:
-		return -1
+		return len(s)
+	case []positouch.Ticket:
+		return len(s)
 	}
-}
-
-func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity string) {
-	d, ok := store.data[locationID]
-	if !ok {
-		http.Error(w, "location not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	switch entity {
-	case "tables":
-		json.NewEncoder(w).Encode(d.Tables)
-	case "employees":
-		json.NewEncoder(w).Encode(d.Employees)
-	case "tenders":
-		json.NewEncoder(w).Encode(d.Tenders)
-	case "cost_centers":
-		json.NewEncoder(w).Encode(d.CostCenters)
-	case "order_types":
-		json.NewEncoder(w).Encode(d.OrderTypes)
-	case "tickets":
-		json.NewEncoder(w).Encode(d.CurrentTickets)
-	case "menu_items":
-		json.NewEncoder(w).Encode(d.MenuItems)
-	case "categories":
-		json.NewEncoder(w).Encode(d.Categories)
-	case "modifiers":
-		json.NewEncoder(w).Encode(d.Modifiers)
-	default:
-		http.Error(w, "entity not found", http.StatusNotFound)
-	}
+	return 0
 }
