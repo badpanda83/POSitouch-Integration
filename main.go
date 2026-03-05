@@ -49,10 +49,12 @@ func main() {
 	fmt.Printf("║  %-38s║\n", "POSitouch Integration Agent")
 	fmt.Printf("╚═══════════════════════════════════════════╝\n\n")
 
-	// If started by the Windows SCM, hand control over immediately so the SCM
-	// does not time out waiting for the service to report "Running".
-	// svcStop is closed when the SCM sends a Stop/Shutdown command.
-	_, svcStop := runAsWindowsService(appName)
+	// If started by the Windows SCM, runAsWindowsService blocks inside svc.Run
+	// until the SCM sends Stop/Shutdown, then returns true. We return immediately
+	// so the process exits cleanly. Interactive runs return false and fall through.
+	if runAsWindowsService(*configPath) {
+		return
+	}
 
 	log.Printf("[main] config path : %s", *configPath)
 
@@ -159,7 +161,7 @@ func main() {
 		}
 		log.Printf("[sync] All entities uploaded for location: %s", locationID)
 	}
-	cacheAndUpload()
+cacheAndUpload()
 
 	go func() {
 		for {
@@ -293,25 +295,16 @@ func main() {
 		}
 	}()
 
-	// --- GRACEFUL SHUTDOWN ---
-	// Wait for SIGINT/SIGTERM (interactive) or SCM Stop/Shutdown (service mode).
+	// --- GRACEFUL SHUTDOWN (interactive mode only) ---
+	// In service mode, winsvc.go's Execute() owns the lifecycle and returns
+	// before we get here (runAsWindowsService returned true above).
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
-	if svcStop != nil {
-		select {
-		case <-sigCh:
-			log.Println("[main] received OS signal — shutting down")
-		case <-svcStop:
-			log.Println("[main] received SCM stop — shutting down")
-		}
-	} else {
-		<-sigCh
-		log.Println("[main] received OS signal — shutting down")
-	}
+	<-sigCh
+	log.Println("[main] received OS signal — shutting down")
 }
 
-// countItems returns the length of a slice passed as interface{}.  
+// countItems returns the length of a slice passed as interface{}. 
 func countItems(v interface{}) int {
 	switch s := v.(type) {
 	case []entities.Employee:
