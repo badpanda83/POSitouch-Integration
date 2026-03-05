@@ -41,7 +41,7 @@ jobs:
         run: |
           mkdir -p installer/out
           GOOS=windows GOARCH=amd64 go build \
-            -ldflags "-X main.appVersion={ steps.version.outputs.version }" \
+            -ldflags "-X main.appVersion=${{ steps.version.outputs.version }}" \
             -o installer/out/POSitouch-Integration.exe \
             .
 
@@ -56,37 +56,4 @@ jobs:
         run: |
           $version = "${{ steps.version.outputs.version }}"
           $wxs = Get-Content installer/installer.wxs -Raw
-          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$version`""
-          Set-Content installer/installer.wxs $wxs
-
-      - name: Install WiX v4 and build MSI
-        shell: pwsh
-        run: |
-          dotnet tool install --global wix --version 4.0.5
-          $env:PATH = "$env:USERPROFILE\.dotnet\tools;$env:PATH"
-          wix extension add --global WixToolset.UI.wixext/4.0.5
-          wix extension add --global WixToolset.Util.wixext/4.0.5
-          wix build installer/installer.wxs `
-            -ext WixToolset.UI.wixext `
-            -ext WixToolset.Util.wixext `
-            -o installer/out/RooamPOSAgent-Setup.msi
-
-      - name: Create GitHub Release and upload MSI
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: "Rooam POS Agent ${{ steps.version.outputs.tag }}"
-          body: |
-            ## Rooam POS Agent ${{ steps.version.outputs.tag }}
-
-            ### Installation
-            1. Download `RooamPOSAgent-Setup.msi` below
-            2. Run the installer as Administrator
-            3. Follow the setup wizard — it will auto-detect your POSitouch paths
-
-            ### Requirements
-            - Windows 10 / Windows 11
-            - POSitouch installed (typically at `C:\SC\`)
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
-          files: installer/out/RooamPOSAgent-Setup.msi
+          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=\
