@@ -19,6 +19,7 @@ import (
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/driver"
+	micros3700driver "github.com/badpanda83/POSitouch-Integration/driver/micros3700"
 	positouchdriver "github.com/badpanda83/POSitouch-Integration/driver/positouch"
 	"github.com/badpanda83/POSitouch-Integration/entities"
 	"github.com/badpanda83/POSitouch-Integration/ordering"
@@ -59,6 +60,8 @@ func main() {
 	switch cfg.EffectivePOSType() {
 	case "positouch":
 		posDriver = positouchdriver.New(cfg)
+	case "micros3700":
+		posDriver = micros3700driver.New(cfg)
 	default:
 		log.Fatalf("[main] unknown pos_type: %q", cfg.EffectivePOSType())
 	}

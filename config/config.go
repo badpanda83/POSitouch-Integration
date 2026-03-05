@@ -76,6 +76,8 @@ type Config struct {
 // MICROS3700Config holds connection settings for the MICROS 3700 Transaction Services interface.
 type MICROS3700Config struct {
 	TransactionServicesURL string `json:"transaction_services_url"`
+	HTTPUser               string `json:"http_user,omitempty"`
+	HTTPPassword           string `json:"http_password,omitempty"`
 	DatabaseHost           string `json:"database_host"`
 	DatabaseName           string `json:"database_name"`
 	DatabaseUser           string `json:"database_user"`
@@ -105,22 +107,24 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("config: parse %q: %w", path, err)
 	}
 
-	if cfg.POSitouch.SpcwinPath == "" {
-		return nil, fmt.Errorf("config: positouch.spcwin_path is empty")
+	if cfg.EffectivePOSType() == "positouch" {
+		if cfg.POSitouch.SpcwinPath == "" {
+			return nil, fmt.Errorf("config: positouch.spcwin_path is empty")
+		}
+
+		scDir := filepath.Dir(cfg.POSitouch.SpcwinPath)
+		parentDir := filepath.Dir(scDir)
+		dbfDir := filepath.Join(parentDir, "DBF")
+		altdbfDir := filepath.Join(parentDir, "ALTDBF")
+
+		cfg.SCPath = scDir + string(filepath.Separator)
+		cfg.SCDir = cfg.SCPath
+		cfg.DBFPath = dbfDir + string(filepath.Separator)
+		cfg.DBFDir = cfg.DBFPath
+		cfg.ALTDBFPath = altdbfDir + string(filepath.Separator)
+		cfg.ALTDBFDir = cfg.ALTDBFPath
+		cfg.AltDBFDir = cfg.ALTDBFDir
 	}
-
-	scDir := filepath.Dir(cfg.POSitouch.SpcwinPath)
-	parentDir := filepath.Dir(scDir)
-	dbfDir := filepath.Join(parentDir, "DBF")
-	altdbfDir := filepath.Join(parentDir, "ALTDBF")
-
-	cfg.SCPath = scDir + string(filepath.Separator)
-	cfg.SCDir = cfg.SCPath
-	cfg.DBFPath = dbfDir + string(filepath.Separator)
-	cfg.DBFDir = cfg.DBFPath
-	cfg.ALTDBFPath = altdbfDir + string(filepath.Separator)
-	cfg.ALTDBFDir = cfg.ALTDBFPath
-	cfg.AltDBFDir = cfg.ALTDBFDir
 
 	cfg.InstallDir = filepath.Dir(path)
 
