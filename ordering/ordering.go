@@ -120,6 +120,51 @@ type Orders struct {
 	NewOrder *NewOrder `xml:"NewOrder,omitempty"`
 }
 
+// UpdateOrders is the root element for payment XML files.
+type UpdateOrders struct {
+	XMLName     xml.Name     `xml:"Orders"`
+	UpdateOrder *UpdateOrder `xml:"UpdateOrder,omitempty"`
+}
+
+// UpdateOrder is the POSitouch Function=4 (pay + close) command.
+type UpdateOrder struct {
+	CheckNumber            int       `xml:"CheckNumber"`
+	SubCheckNumber         int       `xml:"SubCheckNumber,omitempty"`
+	Function               int       `xml:"Function"`   // always 4
+	ErrorLevel             int       `xml:"ErrorLevel"` // always 2
+	GuestCheckCopies       int       `xml:"GuestCheckCopies,omitempty"`
+	AutoReprintCheckCopies int       `xml:"AutoReprintCheckCopies,omitempty"`
+	ReferenceNumber        string    `xml:"ReferenceNumber,omitempty"`
+	Check                  *PayCheck `xml:"Check,omitempty"`
+	Payment                *Payment  `xml:"Payment,omitempty"`
+}
+
+type PayCheck struct {
+	CheckHeader PayCheckHeader `xml:"CheckHeader"`
+}
+
+type PayCheckHeader struct {
+	TerminalNumber string `xml:"TerminalNumber,omitempty"`
+}
+
+type Payment struct {
+	PaymentHeader  PaymentHeader   `xml:"PaymentHeader"`
+	PaymentDetails []PaymentDetail `xml:"PaymentDetail,omitempty"`
+}
+
+type PaymentHeader struct {
+	CashierNumber   string `xml:"CashierNumber"`
+	TerminalNumber  string `xml:"TerminalNumber,omitempty"`
+	PaymentTerminal string `xml:"PaymentTerminal,omitempty"`
+}
+
+type PaymentDetail struct {
+	PaymentType   int     `xml:"PaymentType"`
+	PaymentAmount float64 `xml:"PaymentAmount"`
+	PaymentTip    float64 `xml:"PaymentTip,omitempty"`
+	PaymentMemo   string  `xml:"PaymentMemo,omitempty"`
+}
+
 type NewOrder struct {
 	Function        int    `xml:"Function"`
 	ErrorLevel      int    `xml:"ErrorLevel"`
@@ -340,6 +385,22 @@ func writeOrderXMLAtomically(xmlData []byte, dir string) error {
 	return os.Rename(tmp, final)
 }
 
+// PaymentRequest is the payload delivered by the cloud server's pending-payments queue.
+type PaymentRequest struct {
+	ReferenceNumber        string `json:"reference_number"`
+	TicketNumber           int    `json:"ticket_number"`
+	SubTicketNumber        int    `json:"sub_ticket_number,omitempty"`
+	TenderTypeID           int    `json:"tender_type_id"`
+	Amount                 int    `json:"amount"`              // cents
+	TipAmount              int    `json:"tip_amount,omitempty"` // cents
+	AllowsTips             bool   `json:"allows_tips,omitempty"`
+	CashierNumber          string `json:"cashier_number"`
+	TerminalNumber         string `json:"terminal_number,omitempty"`
+	GuestCheckCopies       int    `json:"guest_check_copies,omitempty"`
+	AutoReprintCheckCopies int    `json:"auto_reprint_check_copies,omitempty"`
+	Comment                string `json:"comment,omitempty"`
+}
+
 // FindConfirmation scans xmlDir for OUT*.XML (and OUT*.xml) files and returns the first
 // OrderConfirmation whose ReferenceNumber matches refNum, along with the file path.
 func FindConfirmation(xmlDir, refNum string) (*OrderConfirmation, string, error) {
@@ -409,6 +470,58 @@ func WriteOrderXML(req CreateTicketRequest, dir string) error {
 	}
 
 	xmlData, err := xml.MarshalIndent(order, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeOrderXMLAtomically(xmlData, dir)
+}
+
+// WritePaymentXML builds a POSitouch Function=4 (pay + close) XML file and atomically
+// writes it to dir as ORDER<random>.XML.
+//
+// Amount and TipAmount in the request are in cents; this function converts them to
+// dollars before writing (POSitouch expects decimal amounts like "42.75").
+func WritePaymentXML(req PaymentRequest, dir string) error {
+	amountDollars := float64(req.Amount) / 100.0
+	tipDollars := float64(req.TipAmount) / 100.0
+
+	detail := PaymentDetail{
+		PaymentType:   req.TenderTypeID,
+		PaymentAmount: amountDollars,
+	}
+	if req.AllowsTips || req.TipAmount > 0 {
+		detail.PaymentTip = tipDollars
+	}
+	if req.Comment != "" {
+		detail.PaymentMemo = "*{" + req.Comment + "}"
+	}
+
+	update := UpdateOrders{
+		UpdateOrder: &UpdateOrder{
+			CheckNumber:            req.TicketNumber,
+			SubCheckNumber:         req.SubTicketNumber,
+			Function:               4,
+			ErrorLevel:             2,
+			GuestCheckCopies:       req.GuestCheckCopies,
+			AutoReprintCheckCopies: req.AutoReprintCheckCopies,
+			ReferenceNumber:        req.ReferenceNumber,
+			Check: &PayCheck{
+				CheckHeader: PayCheckHeader{
+					TerminalNumber: req.TerminalNumber,
+				},
+			},
+			Payment: &Payment{
+				PaymentHeader: PaymentHeader{
+					CashierNumber:   req.CashierNumber,
+					TerminalNumber:  req.TerminalNumber,
+					PaymentTerminal: req.TerminalNumber,
+				},
+				PaymentDetails: []PaymentDetail{detail},
+			},
+		},
+	}
+
+	xmlData, err := xml.MarshalIndent(update, "", "  ")
 	if err != nil {
 		return err
 	}
