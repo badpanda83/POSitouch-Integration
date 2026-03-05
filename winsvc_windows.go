@@ -4,8 +4,9 @@
 //
 // When the agent binary is launched by the Windows SCM (i.e. as a service),
 // svc.IsWindowsService() returns true. runAsWindowsService starts the SCM
-// dispatch loop in a goroutine and returns (true, stopCh). main() blocks on
-// stopCh until the SCM sends Stop or Shutdown, then exits cleanly.
+// dispatch loop in a goroutine and returns (true, stopCh). main() continues
+// with all agent logic unconditionally and uses stopCh only for graceful
+// shutdown alongside OS signals.
 //
 // When run interactively, svc.IsWindowsService() returns false and
 // runAsWindowsService returns (false, nil) immediately — no behaviour change.
