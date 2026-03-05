@@ -16,6 +16,7 @@
 // Flags:
 //
 //	-location-name    string  Venue / restaurant name
+//	-location-id      string  Location identifier (defaults to location-name if blank)
 //	-address          string  Street address (address1)
 //	-phone            string  Contact phone number
 //	-email            string  Contact e-mail address
@@ -73,30 +74,32 @@ type cloudConfig struct {
 
 // rooamConfig is the full rooam_config.json schema (POSitouch variant).
 type rooamConfig struct {
-	Location     location    `json:"location"`
-	Rooam        rooam       `json:"rooam"`
-	POSitouch    positouch   `json:"positouch"`
-	Cloud        cloudConfig `json:"cloud"`
-	POSType      string      `json:"pos_type"`
-	XMLDir       string      `json:"xml_dir"`
-	XMLCloseDir  string      `json:"xml_close_dir"`
-	XMLInOrderDir string     `json:"xml_inorder_dir"`
+	Location      location    `json:"location"`
+	Rooam         rooam       `json:"rooam"`
+	POSitouch     positouch   `json:"positouch"`
+	Cloud         cloudConfig `json:"cloud"`
+	POSType       string      `json:"pos_type"`
+	LocationID    string      `json:"location_id,omitempty"`
+	XMLDir        string      `json:"xml_dir"`
+	XMLCloseDir   string      `json:"xml_close_dir"`
+	XMLInOrderDir string      `json:"xml_inorder_dir"`
 }
 
 func main() {
 	// ------------------------------------------------------------------ flags
-	locationName    := flag.String("location-name", "", "Venue / restaurant name (required)")
-	address         := flag.String("address", "", "Street address (address1)")
-	phone           := flag.String("phone", "", "Contact phone number")
-	email           := flag.String("email", "", "Contact e-mail address")
-	employeeID      := flag.String("employee-id", "", "Rooam employee identifier")
-	tenderID        := flag.String("tender-id", "", "Rooam tender identifier")
-	apiKey          := flag.String("api-key", "", "Cloud API key")
-	spcwinPath      := flag.String("spcwin-path", `C:\SC\spcwin.exe`, "Full path to spcwin.exe")
-	xmlDir          := flag.String("xml-dir", `C:\SC\XML`, "Open-tickets XML directory")
-	xmlCloseDir     := flag.String("xml-close-dir", `C:\SC\XMLCLOSE`, "Closed-tickets XML directory")
-	xmlInOrderDir   := flag.String("xml-inorder-dir", `C:\SC\INORDER`, "Inbound-order XML directory")
-	outputPath      := flag.String("output", "", "Destination file path (default: <exe dir>/rooam_config.json)")
+	locationName  := flag.String("location-name", "", "Venue / restaurant name (required)")
+	locationID    := flag.String("location-id", "", "Location identifier (defaults to location-name if blank)")
+	address       := flag.String("address", "", "Street address (address1)")
+	phone         := flag.String("phone", "", "Contact phone number")
+	email         := flag.String("email", "", "Contact e-mail address")
+	employeeID    := flag.String("employee-id", "", "Rooam employee identifier")
+	tenderID      := flag.String("tender-id", "", "Rooam tender identifier")
+	apiKey        := flag.String("api-key", "", "Cloud API key")
+	spcwinPath    := flag.String("spcwin-path", `C:\SC\spcwin.exe`, "Full path to spcwin.exe")
+	xmlDir        := flag.String("xml-dir", `C:\SC\XML`, "Open-tickets XML directory")
+	xmlCloseDir   := flag.String("xml-close-dir", `C:\SC\XMLCLOSE`, "Closed-tickets XML directory")
+	xmlInOrderDir := flag.String("xml-inorder-dir", `C:\SC\INORDER`, "Inbound-order XML directory")
+	outputPath    := flag.String("output", "", "Destination file path (default: <exe dir>/rooam_config.json)")
 
 	flag.Parse()
 
@@ -111,6 +114,11 @@ func main() {
 	}
 
 	// ------------------------------------------------------------------ build config
+	resolvedLocationID := *locationID
+	if resolvedLocationID == "" {
+		resolvedLocationID = *locationName
+	}
+
 	cfg := rooamConfig{
 		Location: location{
 			Name:    *locationName,
@@ -132,6 +140,7 @@ func main() {
 			APIKey:   *apiKey,
 		},
 		POSType:       defaultPOSType,
+		LocationID:    resolvedLocationID,
 		XMLDir:        *xmlDir,
 		XMLCloseDir:   *xmlCloseDir,
 		XMLInOrderDir: *xmlInOrderDir,
