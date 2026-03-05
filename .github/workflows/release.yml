@@ -59,7 +59,7 @@ jobs:
           $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$version`""
           Set-Content installer/installer.wxs $wxs
 
-      - name: Install WiX v4.0.5 and build MSI
+      - name: Install WiX v4 and build MSI
         shell: pwsh
         run: |
           dotnet tool install --global wix --version 4.0.5
