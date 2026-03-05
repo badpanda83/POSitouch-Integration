@@ -29,7 +29,7 @@ import (
 const (
 	appName    = "rooam-pos-agent"
 	appVersion = "1.0.0"
-	exportDir  = "C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export"
+	exportDir  = `C:\Users\Omnivore\Documents\POSitouch-Integration\utils\Export`
 	tablesXML  = exportDir + `\set1.xml`
 )
 
