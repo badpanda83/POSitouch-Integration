@@ -12,6 +12,7 @@
     Version="1.0.0"
     UpgradeCode="3F8B2D1A-4C5E-4F6A-8B7D-9E0F1A2B3C4D"
     Scope="perMachine"
+    Platform="x64"
     InstallerVersion="500"
     Compressed="yes">
 
