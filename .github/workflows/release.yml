@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    name: Build MSI and publish release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Set up .NET (required for WiX v4)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.x"
+
+      - name: Install WiX Toolset v4
+        run: dotnet tool install --global wix
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build Go binary (Windows amd64)
+        shell: bash
+        run: |
+          mkdir -p installer/out
+          GOOS=windows GOARCH=amd64 go build \
+            -ldflags "-X main.appVersion=${{ steps.version.outputs.version }}" \
+            -o installer/out/POSitouch-Integration.exe \
+            .
+
+      - name: Build config_writer helper
+        shell: bash
+        run: |
+          cd installer/config_writer
+          GOOS=windows GOARCH=amd64 go build -o ../out/config_writer.exe .
+
+      - name: Patch version into installer.wxs
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $wxs = Get-Content installer/installer.wxs -Raw
+          $wxs = $wxs -replace 'Version="[0-9]+\.[0-9]+\.[0-9]+"', "Version=`"$version`""
+          Set-Content installer/installer.wxs $wxs
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          wix build installer/installer.wxs `
+            -ext WixToolset.UI.wixext `
+            -ext WixToolset.Util.wixext `
+            -o installer/out/RooamPOSAgent-Setup.msi
+
+      - name: Create GitHub Release and upload MSI
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Rooam POS Agent ${{ steps.version.outputs.tag }}"
+          body: |
+            ## Rooam POS Agent ${{ steps.version.outputs.tag }}
+
+            ### Installation
+            1. Download `RooamPOSAgent-Setup.msi` below
+            2. Run the installer as Administrator
+            3. Follow the setup wizard — it will auto-detect your POSitouch paths
+
+            ### Requirements
+            - Windows 10 / Windows 11
+            - POSitouch installed (typically at `C:\SC\`)
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          files: installer/out/RooamPOSAgent-Setup.msi
