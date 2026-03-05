@@ -1,20 +1,29 @@
+# Build outputs
+POSitouch-Integration
+POSitouch-Integration.exe
 *.exe
 installer/out/
+
+# Cache files
 rooam_cache.json
 data_cache/*.cache
 
+# Runtime config (never commit — use rooam_config.*.example.json as reference)
 rooam_config.json
 
+# Service artifacts
 rooam-pos-agent.exe
-rooam_cache.json
+agent-err.log
+agent.log
 
+# Data exports
 *.CSV
 *.EXP
 *.PDF
 *.LOG
-agent-err.log
-agent.log
 utils/Export/
+
+# Dev scripts
 utils/test-order.ps1
 fix_tables.py
 expset.cmd
