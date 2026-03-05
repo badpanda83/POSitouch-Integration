@@ -55,8 +55,7 @@
 
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next >">
           <!-- Only advance if both required fields are filled -->
-          <Publish Event="NewDialog" Value="POSPathsDlg" Order="1" Condition="LOCATION_NAME AND API_KEY" />
-          <Publish Event="SpawnDialog" Value="ValidateProductID" Order="2" Condition="NOT (LOCATION_NAME AND API_KEY)" />
+          <Publish Event="NewDialog" Value="POSPathsDlg" Condition="LOCATION_NAME AND API_KEY" />
         </Control>
 
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
