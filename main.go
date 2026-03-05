@@ -1,4 +1,4 @@
-﻿// POSitouch Integration Agent â€” reads POSitouch DBF files every 30 minutes,
+// POSitouch Integration Agent â€” reads POSitouch DBF files every 30 minutes,
 // caches the data in memory, and exposes it via REST endpoints.
 package main
 
@@ -18,15 +18,18 @@ import (
 
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
+	"github.com/badpanda83/POSitouch-Integration/driver"
+	positouchdriver "github.com/badpanda83/POSitouch-Integration/driver/positouch"
+	"github.com/badpanda83/POSitouch-Integration/entities"
 	"github.com/badpanda83/POSitouch-Integration/ordering"
 	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
 const (
-	appName   = "rooam-pos-agent"
+	appName    = "rooam-pos-agent"
 	appVersion = "1.0.0"
 	exportDir  = "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration\\utils\\Export"
-	tablesXML    = exportDir + `\set1.xml`
+	tablesXML  = exportDir + `\set1.xml`
 )
 
 var store = struct {
@@ -52,13 +55,20 @@ func main() {
 		log.Fatalf("[main] failed to load config: %v", err)
 	}
 
+	var posDriver driver.POSDriver
+	switch cfg.EffectivePOSType() {
+	case "positouch":
+		posDriver = positouchdriver.New(cfg)
+	default:
+		log.Fatalf("[main] unknown pos_type: %q", cfg.EffectivePOSType())
+	}
+	log.Printf("[main] POS driver     : %s", posDriver.Name())
+
 	log.Printf("[main] location    : %s", cfg.Location.Name)
 	log.Printf("[main] install dir : %s", cfg.InstallDir)
 	log.Printf("[main] SC dir      : %s", cfg.SCDir)
 	log.Printf("[main] DBF dir     : %s", cfg.DBFDir)
 	log.Printf("[main] ALTDBF dir  : %s", cfg.AltDBFDir)
-
-	c := cache.New(cfg.InstallDir)
 
 	locationID := cfg.Location.Name
 	// FIX: trim any trailing slash from the configured endpoint to prevent
@@ -77,82 +87,25 @@ func main() {
 	cacheAndUpload := func() {
 		log.Printf("[sync] Refreshing & uploading POSitouch entities for location: %s", locationID)
 
-		// Regenerate and copy set1.xml so table data is fresh
-		if err := positouch.RunWExportAndCopySet1(); err != nil {
-			log.Printf("[sync][WARN] WExport failed, tables may be stale: %v", err)
-		} else {
-			log.Printf("[sync] WExport completed, set1.xml refreshed")
+		snapshot, syncErr := posDriver.SyncEntities()
+		if syncErr != nil {
+			log.Printf("[sync][ERROR] SyncEntities failed: %v", syncErr)
+			return
 		}
 
-		costCenters, _ := positouch.ReadCostCenters(cfg.DBFDir)
-		tenders, _ := positouch.ReadTenders(cfg.DBFDir)
-		employees, _ := positouch.ReadEmployees(cfg.DBFDir, cfg.SCDir)
-
-		// ------------- TABLES (FROM XML) -------------
-		tables, err := positouch.ParseTablesFromSet1XML(tablesXML)
-		if err != nil {
-			log.Printf("[sync][WARN] Unable to load tables: %v", err)
-			tables = nil
-		} else {
-			log.Printf("[sync] Loaded %d tables from %s", len(tables), tablesXML)
+		tickets, tickErr := posDriver.SyncTickets()
+		if tickErr != nil {
+			log.Printf("[sync][WARN] SyncTickets failed: %v", tickErr)
 		}
 
-		orderTypes, _ := positouch.ReadOrderTypes(cfg.DBFDir)
-		tickets, _ := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
-
-		// ----------- MENU ITEMS -----------
-		menuXMLPath := exportPath("menu_items.xml")
-		menuItems, _ := positouch.ParseMenuXML(menuXMLPath)
-		if len(menuItems) == 0 {
-			log.Printf("[sync][WARN] No menu items loaded from %s", menuXMLPath)
-		} else {
-			log.Printf("[sync] Loaded %d menu items from %s", len(menuItems), menuXMLPath)
-		}
-
-		// ----------- CATEGORIES -----------
-		catXMLPath := exportPath("menu_categories.xml")
-		categories, _ := positouch.ParseMenuCategories(catXMLPath)
-		if len(categories) == 0 {
-			log.Printf("[sync][WARN] No categories loaded from %s", catXMLPath)
-		} else {
-			log.Printf("[sync] Loaded %d categories from %s", len(categories), catXMLPath)
-		}
-
-		// ----------- MODIFIERS -----------
-		modXMLPath := exportPath("menu_items.xml")
-		modifiers, _ := positouch.ParseMenuModifiers(modXMLPath)
-		if len(modifiers) == 0 {
-			log.Printf("[sync][WARN] No modifiers loaded from %s", modXMLPath)
-		} else {
-			log.Printf("[sync] Loaded %d modifiers from %s", len(modifiers), modXMLPath)
-		}
-
-		d := cache.Data{
-			CostCenters:       costCenters,
-			Tenders:           tenders,
-			Employees:         employees,
-			Tables:            tables,
-			OrderTypes:        orderTypes,
-			CurrentTickets:    tickets,
-			HistoricalTickets: nil,
-			MenuItems:         menuItems,
-			Categories:        categories,
-			Modifiers:         modifiers,
-			LastUpdated:       time.Now(),
-		}
-		c.Update(d)
-
-		cached := c.Get()
 		entityMap := map[string]interface{}{
-			"employees":    cached.Employees,
-			"tables":       cached.Tables,
-			"tenders":      cached.Tenders,
-			"cost_centers": cached.CostCenters,
-			"order_types":  cached.OrderTypes,
-			"tickets":      cached.CurrentTickets,
-			"menu_items":   cached.MenuItems,
-			"categories":   cached.Categories,
-			"modifiers":    cached.Modifiers,
+			"employees":    snapshot.Employees,
+			"tables":       snapshot.Tables,
+			"tenders":      snapshot.Tenders,
+			"cost_centers": snapshot.CostCenters,
+			"order_types":  snapshot.OrderTypes,
+			"tickets":      tickets,
+			"menu_items":   snapshot.MenuItems,
 		}
 
 		for entity, arr := range entityMap {
@@ -201,7 +154,7 @@ func main() {
 
 	// --- FAST TICKET REFRESH FUNCTION ---
 	refreshTickets := func() {
-		tickets, err := positouch.ReadAllTickets(cfg.XMLDir, cfg.XMLCloseDir)
+		tickets, err := posDriver.SyncTickets()
 		if err != nil {
 			log.Printf("[ticket_sync] error reading tickets: %v", err)
 			return
@@ -331,7 +284,7 @@ func main() {
 
 	go func() {
 		for {
-			pollPendingOrders(cfg, cfg.XMLInOrderDir, cfg.XMLDir, cfg.XMLCloseDir)
+			pollPendingOrders(cfg, posDriver)
 			pollPendingPayments(cfg, cfg.XMLInOrderDir)
 			time.Sleep(5 * time.Second)
 		}
@@ -353,19 +306,19 @@ func countItems(arr interface{}) int {
 	switch v := arr.(type) {
 	case []interface{}:
 		return len(v)
-	case []positouch.Employee:
+	case []entities.Employee:
 		return len(v)
-	case []positouch.Table:
+	case []entities.Table:
 		return len(v)
-	case []positouch.Tender:
+	case []entities.Tender:
 		return len(v)
-	case []positouch.CostCenter:
+	case []entities.CostCenter:
 		return len(v)
-	case []positouch.OrderType:
+	case []entities.OrderType:
 		return len(v)
-	case []positouch.Ticket:
+	case []entities.Ticket:
 		return len(v)
-	case []positouch.MenuItem:
+	case []entities.MenuItem:
 		return len(v)
 	case []positouch.Category:
 		return len(v)
@@ -406,4 +359,3 @@ func handleGetEntity(w http.ResponseWriter, r *http.Request, locationID, entity 
 		http.Error(w, "entity not found", http.StatusNotFound)
 	}
 }
-

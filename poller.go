@@ -8,22 +8,21 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
+	"github.com/badpanda83/POSitouch-Integration/driver"
+	"github.com/badpanda83/POSitouch-Integration/entities"
 	"github.com/badpanda83/POSitouch-Integration/ordering"
-	"github.com/badpanda83/POSitouch-Integration/positouch"
 )
 
 const (
-	pollerConfirmTimeout     = 30 * time.Second
-	pollerConfirmInterval    = 2 * time.Second
-	pollerTicketMatchWindow  = 60 * time.Second
+	pollerConfirmTimeout  = 30 * time.Second
+	pollerConfirmInterval = 2 * time.Second
 )
 
-func pollPendingOrders(cfg *config.Config, xmlInOrderDir string, xmlDir string, xmlCloseDir string) {
+func pollPendingOrders(cfg *config.Config, posDriver driver.POSDriver) {
 	base := strings.TrimRight(cfg.Cloud.Endpoint, "/")
 	locationID := cfg.LocationID
 	if locationID == "" {
@@ -73,68 +72,25 @@ func pollPendingOrders(cfg *config.Config, xmlInOrderDir string, xmlDir string, 
 	log.Printf("[poller] received %d pending order(s)", len(pending))
 
 	for _, p := range pending {
-		var ticketReq ordering.CreateTicketRequest
+		var ticketReq entities.CreateOrderRequest
 		if err := json.Unmarshal(p.Payload, &ticketReq); err != nil {
 			log.Printf("[poller] error unmarshalling order %s: %v", p.ReferenceNumber, err)
 			continue
 		}
-		if err := ordering.WriteOrderXML(ticketReq, xmlInOrderDir); err != nil {
-			log.Printf("[poller] error writing XML for order %s: %v", p.ReferenceNumber, err)
-			go putOrderResult(cfg, p.ReferenceNumber, "failed", err.Error(), nil)
-		} else {
-			log.Printf("[poller] wrote XML for order ref=%s", p.ReferenceNumber)
-			go reportOrderResult(cfg, p.ReferenceNumber, ticketReq, xmlDir, xmlCloseDir)
-		}
+		go reportOrderResult(cfg, posDriver, p.ReferenceNumber, ticketReq)
 	}
 }
 
-func reportOrderResult(cfg *config.Config, referenceNumber string, req ordering.CreateTicketRequest, xmlDir string, xmlCloseDir string) {
-	deadline := time.Now().Add(pollerConfirmTimeout)
-	for time.Now().Before(deadline) {
-		conf, confFile, err := ordering.FindConfirmation(xmlDir, referenceNumber)
-		if err == nil && conf != nil {
-			if removeErr := os.Remove(confFile); removeErr != nil {
-				log.Printf("[poller] warning: failed to remove confirmation file %s: %v", confFile, removeErr)
-			}
-
-			if conf.Transaction.ResponseCode != 0 {
-				errText := ""
-				if conf.Transaction.Error != nil {
-					errText = conf.Transaction.Error.Text
-				}
-				putOrderResult(cfg, referenceNumber, "failed", errText, nil)
-				return
-			}
-
-			var matchedTicket *positouch.Ticket
-			tableNum, convErr := strconv.Atoi(req.TableNumber)
-			if convErr != nil {
-				log.Printf("[poller] warning: table_number '%s' is not a valid integer: %v", req.TableNumber, convErr)
-			} else {
-				tickets, tickErr := positouch.ReadAllTickets(xmlDir, xmlCloseDir)
-				if tickErr != nil {
-					log.Printf("[poller] warning: failed to read tickets for confirmation: %v", tickErr)
-				} else {
-					for i := range tickets {
-						t := &tickets[i]
-						if t.Table == tableNum && time.Since(t.OpenedAt) <= pollerTicketMatchWindow {
-							matchedTicket = t
-							break
-						}
-					}
-				}
-			}
-
-			putOrderResult(cfg, referenceNumber, "created", "", matchedTicket)
-			return
-		}
-		time.Sleep(pollerConfirmInterval)
+func reportOrderResult(cfg *config.Config, posDriver driver.POSDriver, referenceNumber string, req entities.CreateOrderRequest) {
+	ticket, err := posDriver.CreateOrder(req)
+	if err != nil {
+		putOrderResult(cfg, referenceNumber, "failed", err.Error(), nil)
+		return
 	}
-
-	putOrderResult(cfg, referenceNumber, "failed", fmt.Sprintf("timeout: no confirmation from POSitouch after %.0fs", pollerConfirmTimeout.Seconds()), nil)
+	putOrderResult(cfg, referenceNumber, "created", "", ticket)
 }
 
-func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, ticket *positouch.Ticket) {
+func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, ticket *entities.Ticket) {
 	locationID := cfg.LocationID
 	if locationID == "" {
 		locationID = cfg.Location.Name
@@ -144,9 +100,9 @@ func putOrderResult(cfg *config.Config, referenceNumber, status, errMsg string, 
 	rawURL := fmt.Sprintf("%s/%s/tickets/%s/result", base, locationID, referenceNumber)
 
 	body := struct {
-		Status string            `json:"status"`
-		Error  string            `json:"error,omitempty"`
-		Ticket *positouch.Ticket `json:"ticket,omitempty"`
+		Status string           `json:"status"`
+		Error  string           `json:"error,omitempty"`
+		Ticket *entities.Ticket `json:"ticket,omitempty"`
 	}{
 		Status: status,
 		Error:  errMsg,
