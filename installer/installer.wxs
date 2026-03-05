@@ -144,13 +144,11 @@
       <DialogRef Id="RooamConfigDlg" />
       <DialogRef Id="POSPathsDlg" />
 
-      <!-- WelcomeDlg: override Next to go to RooamConfigDlg instead of the default -->
+      <!-- Override WelcomeDlg Next to go to our first custom dialog -->
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RooamConfigDlg" Condition="1" />
 
-      <!-- VerifyReadyDlg: Back goes to POSPathsDlg -->
-      <Publish Dialog="VerifyReadyDlg" Control="Back"    Event="NewDialog"   Value="POSPathsDlg" Condition="1" />
-      <Publish Dialog="VerifyReadyDlg" Control="Install" Event="EndDialog"   Value="Return"      Condition="1" />
-      <Publish Dialog="VerifyReadyDlg" Control="Cancel"  Event="SpawnDialog" Value="CancelDlg"   Condition="1" />
+      <!-- Override VerifyReadyDlg Back to go to POSPathsDlg instead of default -->
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="POSPathsDlg" Condition="1" />
 
       <!-- Install UI sequence -->
       <InstallUISequence>
