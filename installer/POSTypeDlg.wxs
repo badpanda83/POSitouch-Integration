@@ -39,8 +39,8 @@
         </Control>
 
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next >">
-          <Publish Event="NewDialog" Value="POSPathsDlg"  Condition="POS_TYPE = &quot;positouch&quot;" />
-          <Publish Event="NewDialog" Value="MICROSDlg"    Condition="POS_TYPE = &quot;micros3700&quot;" />
+          <Publish Event="NewDialog" Value="MICROSDlg"   Order="1" Condition="POS_TYPE = &quot;micros3700&quot;" />
+          <Publish Event="NewDialog" Value="POSPathsDlg" Order="2" Condition="POS_TYPE &lt;&gt; &quot;micros3700&quot;" />
         </Control>
 
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">

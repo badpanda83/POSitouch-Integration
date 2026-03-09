@@ -91,7 +91,7 @@ type cloudConfig struct {
 type rooamConfig struct {
 	Location      location          `json:"location"`
 	Rooam         rooam             `json:"rooam"`
-	POSitouch     positouch         `json:"positouch,omitempty"`
+	POSitouch     *positouch        `json:"positouch,omitempty"`
 	MICROS3700    *micros3700Config `json:"micros3700,omitempty"`
 	Cloud         cloudConfig       `json:"cloud"`
 	POSType       string            `json:"pos_type"`
@@ -171,7 +171,7 @@ func main() {
 			DatabasePassword:       *microsDBPassword,
 		}
 	} else {
-		cfg.POSitouch     = positouch{SpcwinPath: *spcwinPath}
+		cfg.POSitouch     = &positouch{SpcwinPath: *spcwinPath}
 		cfg.XMLDir        = *xmlDir
 		cfg.XMLCloseDir   = *xmlCloseDir
 		cfg.XMLInOrderDir = *xmlInOrderDir
