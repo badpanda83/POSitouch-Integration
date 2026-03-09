@@ -24,24 +24,29 @@
     <MediaTemplate EmbedCab="yes" />
 
     <!-- Properties set during install -->
+    <!-- Secure="yes" ensures these values are passed from the UI process to the
+         elevated server (execute) process in a per-machine install via
+         SecureCustomProperties. Without this, all user-supplied values arrive
+         empty in InstallExecuteSequence and config_writer.exe writes a blank
+         rooam_config.json. -->
     <Property Id="INSTALLDIR" Value="C:\Program Files\Rooam\POSAgent\" />
-    <Property Id="LOCATION_NAME"    Admin="yes" />
-    <Property Id="LOCATION_ID"      Admin="yes" />
-    <Property Id="LOCATION_ADDRESS" Admin="yes" />
-    <Property Id="LOCATION_PHONE"   Admin="yes" />
-    <Property Id="LOCATION_EMAIL"   Admin="yes" />
-    <Property Id="EMPLOYEE_ID"      Admin="yes" />
-    <Property Id="TENDER_ID"        Admin="yes" />
+    <Property Id="LOCATION_NAME"    Secure="yes" />
+    <Property Id="LOCATION_ID"      Secure="yes" />
+    <Property Id="LOCATION_ADDRESS" Secure="yes" />
+    <Property Id="LOCATION_PHONE"   Secure="yes" />
+    <Property Id="LOCATION_EMAIL"   Secure="yes" />
+    <Property Id="EMPLOYEE_ID"      Secure="yes" />
+    <Property Id="TENDER_ID"        Secure="yes" />
     <Property Id="API_KEY"          Secure="yes" />
-    <Property Id="SPCWIN_PATH"     Value="C:\SC\spcwin.exe" />
-    <Property Id="XML_DIR"         Value="C:\SC\XML" />
-    <Property Id="XML_CLOSE_DIR"   Value="C:\SC\XMLCLOSE" />
-    <Property Id="XML_INORDER_DIR" Value="C:\SC\INORDER" />
-    <Property Id="POS_TYPE"          Value="positouch" />
-    <Property Id="MICROS_TS_URL"     Admin="yes" />
-    <Property Id="MICROS_DB_HOST"    Admin="yes" />
-    <Property Id="MICROS_DB_NAME"    Admin="yes" />
-    <Property Id="MICROS_DB_USER"    Admin="yes" />
+    <Property Id="SPCWIN_PATH"     Value="C:\SC\spcwin.exe"  Secure="yes" />
+    <Property Id="XML_DIR"         Value="C:\SC\XML"         Secure="yes" />
+    <Property Id="XML_CLOSE_DIR"   Value="C:\SC\XMLCLOSE"    Secure="yes" />
+    <Property Id="XML_INORDER_DIR" Value="C:\SC\INORDER"     Secure="yes" />
+    <Property Id="POS_TYPE"          Value="positouch"        Secure="yes" />
+    <Property Id="MICROS_TS_URL"     Secure="yes" />
+    <Property Id="MICROS_DB_HOST"    Secure="yes" />
+    <Property Id="MICROS_DB_NAME"    Secure="yes" />
+    <Property Id="MICROS_DB_USER"    Secure="yes" />
     <Property Id="MICROS_DB_PASSWORD" Secure="yes" />
 
     <!-- Directory tree -->
