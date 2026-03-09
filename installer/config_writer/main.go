@@ -15,6 +15,7 @@
 //
 // Flags:
 //
+//	-pos-type         string  POS system type: positouch or micros3700 (default: positouch)
 //	-location-name    string  Venue / restaurant name
 //	-location-id      string  Location identifier (defaults to location-name if blank)
 //	-address          string  Street address (address1)
@@ -23,10 +24,15 @@
 //	-employee-id      string  Rooam employee identifier
 //	-tender-id        string  Rooam tender identifier
 //	-api-key          string  Cloud API key (Bearer token)
-//	-spcwin-path      string  Full path to spcwin.exe
-//	-xml-dir          string  Open-tickets XML directory
-//	-xml-close-dir    string  Closed-tickets XML directory
-//	-xml-inorder-dir  string  Inbound-order XML directory
+//	-spcwin-path      string  Full path to spcwin.exe (POSitouch only)
+//	-xml-dir          string  Open-tickets XML directory (POSitouch only)
+//	-xml-close-dir    string  Closed-tickets XML directory (POSitouch only)
+//	-xml-inorder-dir  string  Inbound-order XML directory (POSitouch only)
+//	-micros-ts-url    string  MICROS 3700 Transaction Services URL
+//	-micros-db-host   string  MICROS 3700 database host
+//	-micros-db-name   string  MICROS 3700 database name
+//	-micros-db-user   string  MICROS 3700 database user
+//	-micros-db-password string MICROS 3700 database password
 //	-output           string  Destination file path (default: same dir as exe)
 package main
 
@@ -65,6 +71,15 @@ type positouch struct {
 	SpcwinPath string `json:"spcwin_path"`
 }
 
+// micros3700Config holds MICROS 3700 connection settings.
+type micros3700Config struct {
+	TransactionServicesURL string `json:"transaction_services_url"`
+	DatabaseHost           string `json:"database_host"`
+	DatabaseName           string `json:"database_name"`
+	DatabaseUser           string `json:"database_user"`
+	DatabasePassword       string `json:"database_password"`
+}
+
 // cloudConfig mirrors config.CloudConfig.
 type cloudConfig struct {
 	Enabled  bool   `json:"enabled"`
@@ -72,34 +87,41 @@ type cloudConfig struct {
 	APIKey   string `json:"api_key,omitempty"`
 }
 
-// rooamConfig is the full rooam_config.json schema (POSitouch variant).
+// rooamConfig is the full rooam_config.json schema.
 type rooamConfig struct {
-	Location      location    `json:"location"`
-	Rooam         rooam       `json:"rooam"`
-	POSitouch     positouch   `json:"positouch"`
-	Cloud         cloudConfig `json:"cloud"`
-	POSType       string      `json:"pos_type"`
-	LocationID    string      `json:"location_id,omitempty"`
-	XMLDir        string      `json:"xml_dir"`
-	XMLCloseDir   string      `json:"xml_close_dir"`
-	XMLInOrderDir string      `json:"xml_inorder_dir"`
+	Location      location          `json:"location"`
+	Rooam         rooam             `json:"rooam"`
+	POSitouch     positouch         `json:"positouch,omitempty"`
+	MICROS3700    *micros3700Config `json:"micros3700,omitempty"`
+	Cloud         cloudConfig       `json:"cloud"`
+	POSType       string            `json:"pos_type"`
+	LocationID    string            `json:"location_id,omitempty"`
+	XMLDir        string            `json:"xml_dir,omitempty"`
+	XMLCloseDir   string            `json:"xml_close_dir,omitempty"`
+	XMLInOrderDir string            `json:"xml_inorder_dir,omitempty"`
 }
 
 func main() {
 	// ------------------------------------------------------------------ flags
-	locationName  := flag.String("location-name", "", "Venue / restaurant name (required)")
-	locationID    := flag.String("location-id", "", "Location identifier (defaults to location-name if blank)")
-	address       := flag.String("address", "", "Street address (address1)")
-	phone         := flag.String("phone", "", "Contact phone number")
-	email         := flag.String("email", "", "Contact e-mail address")
-	employeeID    := flag.String("employee-id", "", "Rooam employee identifier")
-	tenderID      := flag.String("tender-id", "", "Rooam tender identifier")
-	apiKey        := flag.String("api-key", "", "Cloud API key")
-	spcwinPath    := flag.String("spcwin-path", `C:\SC\spcwin.exe`, "Full path to spcwin.exe")
-	xmlDir        := flag.String("xml-dir", `C:\SC\XML`, "Open-tickets XML directory")
-	xmlCloseDir   := flag.String("xml-close-dir", `C:\SC\XMLCLOSE`, "Closed-tickets XML directory")
-	xmlInOrderDir := flag.String("xml-inorder-dir", `C:\SC\INORDER`, "Inbound-order XML directory")
-	outputPath    := flag.String("output", "", "Destination file path (default: <exe dir>/rooam_config.json)")
+	posType          := flag.String("pos-type", defaultPOSType, "POS system type: positouch or micros3700")
+	locationName     := flag.String("location-name", "", "Venue / restaurant name (required)")
+	locationID       := flag.String("location-id", "", "Location identifier (defaults to location-name if blank)")
+	address          := flag.String("address", "", "Street address (address1)")
+	phone            := flag.String("phone", "", "Contact phone number")
+	email            := flag.String("email", "", "Contact e-mail address")
+	employeeID       := flag.String("employee-id", "", "Rooam employee identifier")
+	tenderID         := flag.String("tender-id", "", "Rooam tender identifier")
+	apiKey           := flag.String("api-key", "", "Cloud API key")
+	spcwinPath       := flag.String("spcwin-path", `C:\SC\spcwin.exe`, "Full path to spcwin.exe")
+	xmlDir           := flag.String("xml-dir", `C:\SC\XML`, "Open-tickets XML directory")
+	xmlCloseDir      := flag.String("xml-close-dir", `C:\SC\XMLCLOSE`, "Closed-tickets XML directory")
+	xmlInOrderDir    := flag.String("xml-inorder-dir", `C:\SC\INORDER`, "Inbound-order XML directory")
+	microsTSURL      := flag.String("micros-ts-url", "", "MICROS 3700 Transaction Services URL")
+	microsDBHost     := flag.String("micros-db-host", "", "MICROS 3700 database host")
+	microsDBName     := flag.String("micros-db-name", "", "MICROS 3700 database name")
+	microsDBUser     := flag.String("micros-db-user", "", "MICROS 3700 database user")
+	microsDBPassword := flag.String("micros-db-password", "", "MICROS 3700 database password")
+	outputPath       := flag.String("output", "", "Destination file path (default: <exe dir>/rooam_config.json)")
 
 	flag.Parse()
 
@@ -131,19 +153,28 @@ func main() {
 			TenderID:   *tenderID,
 			EmployeeID: *employeeID,
 		},
-		POSitouch: positouch{
-			SpcwinPath: *spcwinPath,
-		},
 		Cloud: cloudConfig{
 			Enabled:  true,
 			Endpoint: defaultCloudEndpoint,
 			APIKey:   *apiKey,
 		},
-		POSType:       defaultPOSType,
-		LocationID:    resolvedLocationID,
-		XMLDir:        *xmlDir,
-		XMLCloseDir:   *xmlCloseDir,
-		XMLInOrderDir: *xmlInOrderDir,
+		POSType:    *posType,
+		LocationID: resolvedLocationID,
+	}
+
+	if *posType == "micros3700" {
+		cfg.MICROS3700 = &micros3700Config{
+			TransactionServicesURL: *microsTSURL,
+			DatabaseHost:           *microsDBHost,
+			DatabaseName:           *microsDBName,
+			DatabaseUser:           *microsDBUser,
+			DatabasePassword:       *microsDBPassword,
+		}
+	} else {
+		cfg.POSitouch     = positouch{SpcwinPath: *spcwinPath}
+		cfg.XMLDir        = *xmlDir
+		cfg.XMLCloseDir   = *xmlCloseDir
+		cfg.XMLInOrderDir = *xmlInOrderDir
 	}
 
 	// ------------------------------------------------------------------ ensure parent dir exists

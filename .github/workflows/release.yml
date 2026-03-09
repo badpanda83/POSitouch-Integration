@@ -67,7 +67,7 @@ jobs:
           wix extension add --global WixToolset.UI.wixext/4.0.5
           wix extension add --global WixToolset.Util.wixext/4.0.5
           Set-Location installer
-          wix build installer.wxs RooamConfigDlg.wxs POSPathsDlg.wxs `
+          wix build installer.wxs RooamConfigDlg.wxs POSPathsDlg.wxs POSTypeDlg.wxs MICROSDlg.wxs `
             -arch x64 `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
