@@ -93,6 +93,7 @@ type MICROS3700Config struct {
 	TransactionServicesURL string `json:"transaction_services_url"`
 	HTTPUser               string `json:"http_user,omitempty"`
 	HTTPPassword           string `json:"http_password,omitempty"`
+	ConnectionString       string `json:"connection_string,omitempty"`
 	DatabaseHost           string `json:"database_host"`
 	DatabaseName           string `json:"database_name"`
 	DatabaseUser           string `json:"database_user"`
