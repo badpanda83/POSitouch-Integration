@@ -37,6 +37,12 @@
     <Property Id="XML_DIR"         Value="C:\SC\XML" />
     <Property Id="XML_CLOSE_DIR"   Value="C:\SC\XMLCLOSE" />
     <Property Id="XML_INORDER_DIR" Value="C:\SC\INORDER" />
+    <Property Id="POS_TYPE"          Value="positouch" />
+    <Property Id="MICROS_TS_URL"     Admin="yes" />
+    <Property Id="MICROS_DB_HOST"    Admin="yes" />
+    <Property Id="MICROS_DB_NAME"    Admin="yes" />
+    <Property Id="MICROS_DB_USER"    Admin="yes" />
+    <Property Id="MICROS_DB_PASSWORD" Secure="yes" />
 
     <!-- Directory tree -->
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -97,10 +103,20 @@
     </ComponentGroup>
 
     <!-- Custom actions -->
+    <!-- Write config for POSitouch -->
     <CustomAction
-      Id="CA_WriteConfig"
+      Id="CA_WriteConfig_POSitouch"
       Directory="INSTALLDIR"
-      ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -spcwin-path &quot;[SPCWIN_PATH]&quot; -xml-dir &quot;[XML_DIR]&quot; -xml-close-dir &quot;[XML_CLOSE_DIR]&quot; -xml-inorder-dir &quot;[XML_INORDER_DIR]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
+      ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -pos-type positouch -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -spcwin-path &quot;[SPCWIN_PATH]&quot; -xml-dir &quot;[XML_DIR]&quot; -xml-close-dir &quot;[XML_CLOSE_DIR]&quot; -xml-inorder-dir &quot;[XML_INORDER_DIR]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
+      Execute="deferred"
+      Return="check"
+      Impersonate="no" />
+
+    <!-- Write config for MICROS 3700 -->
+    <CustomAction
+      Id="CA_WriteConfig_MICROS"
+      Directory="INSTALLDIR"
+      ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -pos-type micros3700 -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -micros-ts-url &quot;[MICROS_TS_URL]&quot; -micros-db-host &quot;[MICROS_DB_HOST]&quot; -micros-db-name &quot;[MICROS_DB_NAME]&quot; -micros-db-user &quot;[MICROS_DB_USER]&quot; -micros-db-password &quot;[MICROS_DB_PASSWORD]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
       Execute="deferred"
       Return="check"
       Impersonate="no" />
@@ -115,8 +131,9 @@
 
     <!-- Install sequence -->
     <InstallExecuteSequence>
-      <Custom Action="CA_WriteConfig" After="InstallFiles" Condition="NOT Installed" />
-      <Custom Action="CA_HealthCheck" After="StartServices" Condition="NOT Installed" />
+      <Custom Action="CA_WriteConfig_POSitouch" After="InstallFiles" Condition="NOT Installed AND POS_TYPE = &quot;positouch&quot;" />
+      <Custom Action="CA_WriteConfig_MICROS"    After="InstallFiles" Condition="NOT Installed AND POS_TYPE = &quot;micros3700&quot;" />
+      <Custom Action="CA_HealthCheck"           After="StartServices" Condition="NOT Installed" />
     </InstallExecuteSequence>
 
     <!-- UI -->
@@ -142,13 +159,16 @@
       <DialogRef Id="WelcomeDlg" />
       <DialogRef Id="VerifyReadyDlg" />
       <DialogRef Id="RooamConfigDlg" />
+      <DialogRef Id="POSTypeDlg" />
       <DialogRef Id="POSPathsDlg" />
+      <DialogRef Id="MICROSDlg" />
 
       <!-- Override WelcomeDlg Next to go to our first custom dialog -->
       <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="RooamConfigDlg" Condition="1" />
 
-      <!-- Override VerifyReadyDlg Back to go to POSPathsDlg instead of default -->
-      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="POSPathsDlg" Condition="1" />
+      <!-- VerifyReadyDlg Back → POSPathsDlg when POSitouch, → MICROSDlg when MICROS -->
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="POSPathsDlg"  Condition="POS_TYPE = &quot;positouch&quot;" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MICROSDlg"    Condition="POS_TYPE = &quot;micros3700&quot;" />
 
       <!-- Install UI sequence -->
       <InstallUISequence>

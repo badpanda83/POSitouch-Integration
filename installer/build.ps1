@@ -27,6 +27,8 @@ $MsiOut       = Join-Path $OutDir 'RooamPOSAgent-Setup.msi'
 $WxsFile        = Join-Path $InstallerDir 'installer.wxs'
 $RooamConfigDlg = Join-Path $InstallerDir 'RooamConfigDlg.wxs'
 $POSPathsDlg    = Join-Path $InstallerDir 'POSPathsDlg.wxs'
+$POSTypeDlg     = Join-Path $InstallerDir 'POSTypeDlg.wxs'
+$MICROSDlg      = Join-Path $InstallerDir 'MICROSDlg.wxs'
 
 # ---------------------------------------------------------------------------
 # Ensure output directory exists
@@ -98,7 +100,7 @@ Then ensure the .NET global tools directory is in your PATH.
     exit 1
 }
 
-& wix build $WxsFile $RooamConfigDlg $POSPathsDlg `
+& wix build $WxsFile $RooamConfigDlg $POSPathsDlg $POSTypeDlg $MICROSDlg `
     -arch x64 `
     -ext WixToolset.UI.wixext `
     -o $MsiOut
