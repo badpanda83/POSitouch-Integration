@@ -1,6 +1,6 @@
 module github.com/badpanda83/POSitouch-Integration
 
-go 1.25.0
+go 1.20
 
 require (
 	github.com/badpanda83/POSitouch-Integration/positouch v0.1.0

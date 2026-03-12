@@ -1,3 +1,3 @@
 module github.com/badpanda83/POSitouch-Integration/dbf
 
-go 1.25.0
+go 1.20
