@@ -10,19 +10,51 @@ import (
 	"github.com/badpanda83/POSitouch-Integration/config"
 )
 
-// postXML sends an HTTP POST request with an XML body to the MICROS Transaction
-// Services endpoint, using HTTP Basic Auth. It returns the raw response body.
-func postXML(cfg *config.MICROS3700Config, payload interface{}) ([]byte, error) {
-	body, err := xml.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("micros3700: marshal XML: %w", err)
+const microsNS = "http://www.micros.com/res/pos/webservices/general/v1"
+
+// soapEnvelope is a SOAP 1.1 envelope wrapper.
+type soapEnvelope struct {
+	XMLName xml.Name `xml:"soap:Envelope"`
+	SoapNS  string   `xml:"xmlns:soap,attr"`
+	Body    soapBody `xml:"soap:Body"`
+}
+
+type soapBody struct {
+	Payload interface{}
+}
+
+// soapResponseEnvelope is used to unmarshal a SOAP 1.1 response.
+type soapResponseEnvelope struct {
+	XMLName xml.Name         `xml:"Envelope"`
+	Body    soapResponseBody `xml:"Body"`
+}
+
+type soapResponseBody struct {
+	Inner []byte `xml:",innerxml"`
+}
+
+// postSOAP wraps payload in a SOAP 1.1 envelope and POSTs it to the MICROS
+// Transaction Services endpoint. It sets the SOAPAction header, uses HTTP Basic
+// Auth when configured, and returns the inner contents of <soap:Body> so callers
+// do not need to parse the envelope themselves.
+func postSOAP(cfg *config.MICROS3700Config, soapAction string, payload interface{}) ([]byte, error) {
+	env := soapEnvelope{
+		SoapNS: "http://schemas.xmlsoap.org/soap/envelope/",
+		Body:   soapBody{Payload: payload},
 	}
+
+	envBytes, err := xml.Marshal(env)
+	if err != nil {
+		return nil, fmt.Errorf("micros3700: marshal SOAP envelope: %w", err)
+	}
+	body := append([]byte(`<?xml version="1.0" encoding="utf-8"?>`), envBytes...)
 
 	req, err := http.NewRequest(http.MethodPost, cfg.TransactionServicesURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("micros3700: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "text/xml; charset=utf-8")
+	req.Header.Set("SOAPAction", soapAction)
 	if cfg.HTTPUser != "" {
 		req.SetBasicAuth(cfg.HTTPUser, cfg.HTTPPassword)
 	}
@@ -42,5 +74,10 @@ func postXML(cfg *config.MICROS3700Config, payload interface{}) ([]byte, error) 
 		return nil, fmt.Errorf("micros3700: unexpected HTTP status %d: %s", resp.StatusCode, string(respBody))
 	}
 
-	return respBody, nil
+	// Extract the inner contents of <soap:Body>.
+	var envelope soapResponseEnvelope
+	if err := xml.Unmarshal(respBody, &envelope); err != nil {
+		return nil, fmt.Errorf("micros3700: unmarshal SOAP response envelope: %w", err)
+	}
+	return envelope.Body.Inner, nil
 }

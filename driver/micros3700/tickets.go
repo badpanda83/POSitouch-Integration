@@ -10,7 +10,7 @@ import (
 // --- XML request/response types ---
 
 type getOpenChecksRequest struct {
-	XMLName                xml.Name `xml:"GetOpenChecks"`
+	XMLName                xml.Name `xml:"http://www.micros.com/res/pos/webservices/general/v1 GetOpenChecks"`
 	RevenueCenterObjectNum int      `xml:"RevenueCenterObjectNum"`
 }
 
@@ -58,7 +58,7 @@ func (d *Driver) SyncTickets() ([]entities.Ticket, error) {
 		RevenueCenterObjectNum: mcfg.RevenueCenterID,
 	}
 
-	respBody, err := postXML(mcfg, reqPayload)
+	respBody, err := postSOAP(mcfg, microsNS+"/GetOpenChecks", reqPayload)
 	if err != nil {
 		log.Printf("[micros3700][WARN] SyncTickets: %v", err)
 		return []entities.Ticket{}, nil

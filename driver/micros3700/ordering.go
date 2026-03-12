@@ -10,32 +10,28 @@ import (
 
 // --- XML request/response types for order creation ---
 
-type checkAddRequest struct {
-	XMLName xml.Name    `xml:"Checks"`
-	Check   microsOrder `xml:"Check"`
+type postTransactionRequest struct {
+	XMLName xml.Name         `xml:"http://www.micros.com/res/pos/webservices/general/v1 PostTransaction"`
+	Request transactionInput `xml:"request"`
 }
 
-type microsOrder struct {
+type transactionInput struct {
 	EmployeeObjectNum      int               `xml:"EmployeeObjectNum"`
 	TableObjectNum         int               `xml:"TableObjectNum"`
 	RevenueCenterObjectNum int               `xml:"RevenueCenterObjectNum"`
-	CheckItems             []microsOrderItem `xml:"CheckItems>CheckItem"`
+	CheckItems             []transactionItem `xml:"CheckItems>CheckItem"`
 }
 
-type microsOrderItem struct {
+type transactionItem struct {
 	MenuItemObjectNum int `xml:"MenuItemObjectNum"`
 	Quantity          int `xml:"Quantity"`
 }
 
-type checkAddResponse struct {
-	XMLName xml.Name         `xml:"CheckAddResponse"`
-	Check   checkAddRespItem `xml:"Check"`
-}
-
-type checkAddRespItem struct {
-	CheckNum int    `xml:"CheckNum"`
-	Status   string `xml:"Status"`
-	Error    string `xml:"Error"`
+type postTransactionResponse struct {
+	XMLName  xml.Name `xml:"PostTransactionResponse"`
+	CheckNum int      `xml:"CheckNum"`
+	Status   string   `xml:"Status"`
+	ErrorMsg string   `xml:"ErrorMessage"`
 }
 
 // CreateOrder converts the canonical request to a MICROS 3700 XML order, posts it
@@ -62,7 +58,7 @@ func (d *Driver) CreateOrder(req entities.CreateOrderRequest) (*entities.Ticket,
 		}
 	}
 
-	items := make([]microsOrderItem, 0, len(req.Items))
+	items := make([]transactionItem, 0, len(req.Items))
 	for _, it := range req.Items {
 		itemNum, err := strconv.Atoi(it.ItemNumber)
 		if err != nil {
@@ -72,14 +68,14 @@ func (d *Driver) CreateOrder(req entities.CreateOrderRequest) (*entities.Ticket,
 		if qty <= 0 {
 			qty = 1
 		}
-		items = append(items, microsOrderItem{
+		items = append(items, transactionItem{
 			MenuItemObjectNum: itemNum,
 			Quantity:          qty,
 		})
 	}
 
-	payload := checkAddRequest{
-		Check: microsOrder{
+	payload := postTransactionRequest{
+		Request: transactionInput{
 			EmployeeObjectNum:      employeeNum,
 			TableObjectNum:         tableNum,
 			RevenueCenterObjectNum: rvcID,
@@ -87,18 +83,18 @@ func (d *Driver) CreateOrder(req entities.CreateOrderRequest) (*entities.Ticket,
 		},
 	}
 
-	respBody, err := postXML(mcfg, payload)
+	respBody, err := postSOAP(mcfg, microsNS+"/PostTransaction", payload)
 	if err != nil {
 		return nil, fmt.Errorf("micros3700: Transaction Services unreachable: %w", err)
 	}
 
-	var parsed checkAddResponse
+	var parsed postTransactionResponse
 	if err := xml.Unmarshal(respBody, &parsed); err != nil {
 		return nil, fmt.Errorf("micros3700: unmarshal order response: %w", err)
 	}
 
-	if parsed.Check.Status != "Success" {
-		return nil, fmt.Errorf("micros3700: order failed: %s", parsed.Check.Error)
+	if parsed.Status != "Success" {
+		return nil, fmt.Errorf("micros3700: order failed: %s", parsed.ErrorMsg)
 	}
 
 	// Find the newly created ticket by check number.
@@ -107,7 +103,7 @@ func (d *Driver) CreateOrder(req entities.CreateOrderRequest) (*entities.Ticket,
 		return nil, fmt.Errorf("micros3700: SyncTickets after order: %w", err)
 	}
 	for i := range tickets {
-		if tickets[i].Number == parsed.Check.CheckNum {
+		if tickets[i].Number == parsed.CheckNum {
 			return &tickets[i], nil
 		}
 	}
