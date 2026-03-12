@@ -12,17 +12,6 @@ import (
 
 const microsNS = "http://www.micros.com/res/pos/webservices/general/v1"
 
-// soapEnvelope is a SOAP 1.1 envelope wrapper.
-type soapEnvelope struct {
-	XMLName xml.Name `xml:"soap:Envelope"`
-	SoapNS  string   `xml:"xmlns:soap,attr"`
-	Body    soapBody `xml:"soap:Body"`
-}
-
-type soapBody struct {
-	Payload interface{}
-}
-
 // soapResponseEnvelope is used to unmarshal a SOAP 1.1 response.
 type soapResponseEnvelope struct {
 	XMLName xml.Name         `xml:"Envelope"`
@@ -38,16 +27,15 @@ type soapResponseBody struct {
 // Auth when configured, and returns the inner contents of <soap:Body> so callers
 // do not need to parse the envelope themselves.
 func postSOAP(cfg *config.MICROS3700Config, soapAction string, payload interface{}) ([]byte, error) {
-	env := soapEnvelope{
-		SoapNS: "http://schemas.xmlsoap.org/soap/envelope/",
-		Body:   soapBody{Payload: payload},
-	}
-
-	envBytes, err := xml.Marshal(env)
+	payloadBytes, err := xml.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("micros3700: marshal SOAP envelope: %w", err)
+		return nil, fmt.Errorf("micros3700: marshal SOAP payload: %w", err)
 	}
-	body := append([]byte(`<?xml version="1.0" encoding="utf-8"?>`), envBytes...)
+	body := []byte(`<?xml version="1.0" encoding="utf-8"?>` +
+		`<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">` +
+		`<soap:Body>`)
+	body = append(body, payloadBytes...)
+	body = append(body, []byte(`</soap:Body></soap:Envelope>`)...)
 
 	req, err := http.NewRequest(http.MethodPost, cfg.TransactionServicesURL, bytes.NewReader(body))
 	if err != nil {
