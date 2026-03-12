@@ -108,12 +108,18 @@
     </ComponentGroup>
 
     <!-- Custom actions -->
-    <!-- Write config for POSitouch -->
+    <!-- Write config for POSitouch.
+         Execute="deferred" + Impersonate="no": runs in the elevated installer
+         server process AFTER InstallFiles has committed files to disk, so
+         [INSTALLDIR]config_writer.exe is guaranteed to exist when this fires.
+         Immediate CAs run before files land, which caused "file not found" on
+         perMachine installs. -->
     <CustomAction
       Id="CA_WriteConfig_POSitouch"
       Directory="INSTALLDIR"
       ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -pos-type positouch -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -spcwin-path &quot;[SPCWIN_PATH]&quot; -xml-dir &quot;[XML_DIR]&quot; -xml-close-dir &quot;[XML_CLOSE_DIR]&quot; -xml-inorder-dir &quot;[XML_INORDER_DIR]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
-      Execute="immediate"
+      Execute="deferred"
+      Impersonate="no"
       Return="check" />
 
     <!-- Write config for MICROS 3700 -->
@@ -121,7 +127,8 @@
       Id="CA_WriteConfig_MICROS"
       Directory="INSTALLDIR"
       ExeCommand="&quot;[INSTALLDIR]config_writer.exe&quot; -pos-type micros3700 -location-name &quot;[LOCATION_NAME]&quot; -location-id &quot;[LOCATION_ID]&quot; -address &quot;[LOCATION_ADDRESS]&quot; -phone &quot;[LOCATION_PHONE]&quot; -email &quot;[LOCATION_EMAIL]&quot; -employee-id &quot;[EMPLOYEE_ID]&quot; -tender-id &quot;[TENDER_ID]&quot; -api-key &quot;[API_KEY]&quot; -micros-ts-url &quot;[MICROS_TS_URL]&quot; -micros-db-host &quot;[MICROS_DB_HOST]&quot; -micros-db-name &quot;[MICROS_DB_NAME]&quot; -micros-db-user &quot;[MICROS_DB_USER]&quot; -micros-db-password &quot;[MICROS_DB_PASSWORD]&quot; -output &quot;[INSTALLDIR]rooam_config.json&quot;"
-      Execute="immediate"
+      Execute="deferred"
+      Impersonate="no"
       Return="check" />
 
     <CustomAction
