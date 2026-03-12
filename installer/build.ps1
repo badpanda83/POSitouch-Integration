@@ -11,10 +11,51 @@
     Run this script from the installer\ directory:
         cd installer
         .\build.ps1
+
+    This build targets Windows Server 2008 R2 and requires Go 1.20.x.
+    Download Go 1.20.14 from: https://go.dev/dl/go1.20.14.windows-amd64.msi
 #>
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# ---------------------------------------------------------------------------
+# Step 0 — Validate Go version (must be 1.20.x for Windows Server 2008 R2)
+# ---------------------------------------------------------------------------
+Write-Host "`n[build] Checking Go version..." -ForegroundColor Cyan
+
+$goVersionOutput = & go version 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "[build] 'go' command not found. Install Go 1.20.14 from https://go.dev/dl/go1.20.14.windows-amd64.msi"
+    exit 1
+}
+
+# Extract version string e.g. "go1.20.14"
+if ($goVersionOutput -match 'go(\d+)\.(\d+)') {
+    $goMajor = [int]$Matches[1]
+    $goMinor = [int]$Matches[2]
+} else {
+    Write-Error "[build] Could not parse Go version from: $goVersionOutput"
+    exit 1
+}
+
+if ($goMajor -ne 1 -or $goMinor -ne 20) {
+    Write-Error @"
+[build] Unsupported Go version: $goVersionOutput
+       This project targets Windows Server 2008 R2, which requires Go 1.20.x.
+       Go 1.21+ dropped support for Windows Server 2008 R2.
+
+       Please install Go 1.20.14:
+           https://go.dev/dl/go1.20.14.windows-amd64.msi
+
+       If you have multiple Go versions installed, set PATH to point to Go 1.20 first:
+           `$env:GOROOT = 'C:\Go'   # adjust to your Go 1.20 install path
+           `$env:PATH   = "`$env:GOROOT\bin;" + `$env:PATH
+"@
+    exit 1
+}
+
+Write-Host "[build] Go version OK: $goVersionOutput" -ForegroundColor Green
 
 # ---------------------------------------------------------------------------
 # Resolve paths
