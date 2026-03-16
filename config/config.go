@@ -107,8 +107,6 @@ type MICROS3700Config struct {
 	RevenueCenterID int `json:"revenue_center_id,omitempty"`
 	TerminalID      int `json:"terminal_id,omitempty"`
 
-	// RttpPort is the TCP port for the IFS RTTP push interface. Default: 5454.
-	RttpPort int `json:"rttp_port,omitempty"`
 	// ODBCDSN is the 32-bit ODBC DSN name for the Sybase SQL Anywhere 16 database. Default: "Micros".
 	ODBCDSN string `json:"odbc_dsn,omitempty"`
 }
