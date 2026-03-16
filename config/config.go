@@ -142,6 +142,21 @@ func Load(path string) (*Config, error) {
 		cfg.AltDBFDir = cfg.ALTDBFDir
 	}
 
+	if cfg.EffectivePOSType() == "micros3700" {
+		if cfg.MICROS3700 == nil {
+			return nil, fmt.Errorf("config: micros3700 configuration block is required")
+		}
+		if cfg.MICROS3700.TransactionServicesURL == "" {
+			return nil, fmt.Errorf("config: micros3700.transaction_services_url is required")
+		}
+		if cfg.MICROS3700.DatabaseName == "" {
+			return nil, fmt.Errorf("config: micros3700.database_name is required")
+		}
+		if cfg.MICROS3700.DatabaseUser == "" {
+			return nil, fmt.Errorf("config: micros3700.database_user is required")
+		}
+	}
+
 	cfg.InstallDir = filepath.Dir(path)
 
 	if cfg.CloudServerURL == "" {
