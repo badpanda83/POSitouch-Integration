@@ -19,6 +19,16 @@ func New(cfg *config.Config) *Driver {
 // Name returns the identifier for this driver.
 func (d *Driver) Name() string { return "micros3700" }
 
+// SyncEntities reads all MICROS 3700 master data via Sybase ODBC.
+func (d *Driver) SyncEntities() (*entities.Snapshot, error) {
+	return syncEntitiesODBC(d.cfg)
+}
+
+// SyncTickets reads open checks from the MICROS 3700 database via Sybase ODBC.
+func (d *Driver) SyncTickets() ([]entities.Ticket, error) {
+	return syncTicketsODBC(d.cfg)
+}
+
 // Ensure *Driver satisfies the POSDriver interface at compile time.
 var _ interface {
 	SyncEntities() (*entities.Snapshot, error)
