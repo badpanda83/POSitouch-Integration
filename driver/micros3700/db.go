@@ -14,9 +14,43 @@ import (
 )
 
 // openDB opens a connection to the MICROS myq MySQL database.
+// For local connections (localhost / 127.0.0.1 / ::1 / empty host) it first
+// tries the Windows named pipe that MICROS 3700 MySQL commonly uses, then falls
+// back to TCP on 127.0.0.1:3306. Remote hosts always use TCP directly.
 func openDB(cfg *config.MICROS3700Config) (*sql.DB, error) {
+	host := cfg.DatabaseHost
+	isLocal := host == "" || host == "localhost" || host == "127.0.0.1" || host == "::1"
+
+	if isLocal {
+		// MICROS 3700 on Windows typically configures MySQL to listen only on a
+		// named pipe. Try the pipe first; fall back to TCP if it is unavailable.
+		log.Printf("[micros3700] attempting named pipe connection to MySQL")
+		pipeDSN := fmt.Sprintf(`%s:%s@unix(\\.\pipe\MySQL)/%s`,
+			cfg.DatabaseUser, cfg.DatabasePassword, cfg.DatabaseName)
+		if db, err := sql.Open("mysql", pipeDSN); err == nil {
+			if pingErr := db.Ping(); pingErr == nil {
+				log.Printf("[micros3700] connected to MySQL via named pipe")
+				return db, nil
+			} else {
+				log.Printf("[micros3700] named pipe ping failed: %v", pingErr)
+				db.Close()
+			}
+		}
+
+		log.Printf("[micros3700] named pipe connection failed, retrying via TCP")
+		tcpDSN := fmt.Sprintf("%s:%s@tcp(127.0.0.1:3306)/%s",
+			cfg.DatabaseUser, cfg.DatabasePassword, cfg.DatabaseName)
+		db, err := sql.Open("mysql", tcpDSN)
+		if err != nil {
+			return nil, fmt.Errorf("open TCP connection: %w", err)
+		}
+		log.Printf("[micros3700] connected to MySQL via TCP")
+		return db, nil
+	}
+
+	// Non-local host: use TCP directly (existing behaviour).
 	dsn := fmt.Sprintf("%s:%s@tcp(%s)/%s",
-		cfg.DatabaseUser, cfg.DatabasePassword, cfg.DatabaseHost, cfg.DatabaseName)
+		cfg.DatabaseUser, cfg.DatabasePassword, host, cfg.DatabaseName)
 	return sql.Open("mysql", dsn)
 }
 
