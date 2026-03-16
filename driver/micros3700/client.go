@@ -45,7 +45,7 @@ func postSOAP(cfg *config.MICROS3700Config, soapAction string, payload interface
 		return nil, fmt.Errorf("micros3700: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "text/xml; charset=utf-8")
-	req.Header.Set("SOAPAction", soapAction)
+	req.Header.Set("SOAPAction", `"`+soapAction+`"`)
 	if cfg.HTTPUser != "" {
 		req.SetBasicAuth(cfg.HTTPUser, cfg.HTTPPassword)
 	}
