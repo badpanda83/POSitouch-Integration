@@ -113,6 +113,7 @@ type Ticket struct {
 	CostCenterName string       `json:"cost_center_name"`
 	ServiceCharge  float64      `json:"service_charge,omitempty"`
 	Discount       float64      `json:"discount,omitempty"`
+	PhoneNumber    string       `json:"phone_number,omitempty"`
 	Items          []TicketItem `json:"items"`
 	Open           bool         `json:"open"`
 	POSType        string       `json:"pos_type,omitempty"`

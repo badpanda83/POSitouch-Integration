@@ -90,16 +90,27 @@ type Config struct {
 
 // MICROS3700Config holds connection settings for the MICROS 3700 Transaction Services interface.
 type MICROS3700Config struct {
-	TransactionServicesURL string `json:"transaction_services_url"`
+	// Deprecated: TransactionServicesURL was used by the legacy SOAP approach. Retained for
+	// backward compatibility with existing config files but is no longer used.
+	TransactionServicesURL string `json:"transaction_services_url,omitempty"`
 	HTTPUser               string `json:"http_user,omitempty"`
 	HTTPPassword           string `json:"http_password,omitempty"`
 	ConnectionString       string `json:"connection_string,omitempty"`
-	DatabaseHost           string `json:"database_host"`
-	DatabaseName           string `json:"database_name"`
-	DatabaseUser           string `json:"database_user"`
-	DatabasePassword       string `json:"database_password"`
-	RevenueCenterID        int    `json:"revenue_center_id,omitempty"`
-	TerminalID             int    `json:"terminal_id,omitempty"`
+
+	// Deprecated: MySQL-based fields are no longer used. The database is accessed via
+	// Sybase SQL Anywhere 16 through an ODBC DSN. Retained for backward compatibility.
+	DatabaseHost     string `json:"database_host,omitempty"`
+	DatabaseName     string `json:"database_name,omitempty"`
+	DatabaseUser     string `json:"database_user,omitempty"`
+	DatabasePassword string `json:"database_password,omitempty"`
+
+	RevenueCenterID int `json:"revenue_center_id,omitempty"`
+	TerminalID      int `json:"terminal_id,omitempty"`
+
+	// RttpPort is the TCP port for the IFS RTTP push interface. Default: 5454.
+	RttpPort int `json:"rttp_port,omitempty"`
+	// ODBCDSN is the 32-bit ODBC DSN name for the Sybase SQL Anywhere 16 database. Default: "Micros".
+	ODBCDSN string `json:"odbc_dsn,omitempty"`
 }
 
 // EffectivePOSType returns the pos_type, defaulting to "positouch" for backwards
@@ -145,15 +156,6 @@ func Load(path string) (*Config, error) {
 	if cfg.EffectivePOSType() == "micros3700" {
 		if cfg.MICROS3700 == nil {
 			return nil, fmt.Errorf("config: micros3700 configuration block is required")
-		}
-		if cfg.MICROS3700.TransactionServicesURL == "" {
-			return nil, fmt.Errorf("config: micros3700.transaction_services_url is required")
-		}
-		if cfg.MICROS3700.DatabaseName == "" {
-			return nil, fmt.Errorf("config: micros3700.database_name is required")
-		}
-		if cfg.MICROS3700.DatabaseUser == "" {
-			return nil, fmt.Errorf("config: micros3700.database_user is required")
 		}
 	}
 

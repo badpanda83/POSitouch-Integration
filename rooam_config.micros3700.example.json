@@ -3,25 +3,16 @@
   "location": {
     "name": "My Restaurant",
     "country": "US",
-    "address1": "456 Elm Street",
-    "city": "Chicago",
-    "state": "IL",
-    "zip": "60601"
+    "address1": "456 Elm Street"
   },
   "rooam": {
     "tender_id": "rooam-tender-id",
     "employee_id": "rooam-employee-id"
   },
   "micros3700": {
-    "transaction_services_url": "http://192.168.1.100:8008/TransactionServices",
-    "http_user": "micros_http_user",
-    "http_password": "micros_http_password",
-    "database_host": "192.168.1.100:3306",
-    "database_name": "myq",
-    "database_user": "micros_user",
-    "database_password": "micros_password",
-    "revenue_center_id": 1,
-    "terminal_id": 1
+    "rttp_port": 5454,
+    "odbc_dsn": "Micros",
+    "revenue_center_id": 1
   },
   "cloud": {
     "enabled": true,
