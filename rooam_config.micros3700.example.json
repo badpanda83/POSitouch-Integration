@@ -10,7 +10,6 @@
     "employee_id": "rooam-employee-id"
   },
   "micros3700": {
-    "rttp_port": 5454,
     "odbc_dsn": "Micros",
     "revenue_center_id": 1
   },

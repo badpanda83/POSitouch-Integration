@@ -2,29 +2,14 @@
 
 package micros3700driver
 
-// syncEntitiesODBC connects to the Sybase SQL Anywhere 16 database via the
-// 32-bit ODBC DSN already configured on the MICROS server and returns a
-// Snapshot of all master data.
-//
-// Prerequisites for a native Windows build with CGO:
-//   - Run: go get github.com/alexbrainman/odbc
-//   - Add: import _ "github.com/alexbrainman/odbc" in an init file or here
-//
-// If the ODBC connection is unavailable the function logs a warning and
-// returns an empty snapshot so that ticket syncing (RTTP) continues working.
-
 import (
 	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
-	// To enable ODBC access on Windows:
-	//   go get github.com/alexbrainman/odbc
-	// then add the driver registration import:
-	//   _ "github.com/alexbrainman/odbc"
-	// The import is omitted here so the module compiles without the dependency;
-	// sql.Open will fail gracefully and fall back to an empty snapshot.
+	_ "github.com/alexbrainman/odbc"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/entities"
@@ -98,6 +83,49 @@ func syncEntitiesODBC(cfg *config.Config) (*entities.Snapshot, error) {
 		OrderTypes:  orderTypes,
 		MenuItems:   menuItems,
 	}, nil
+}
+
+// syncTicketsODBC reads all open checks from the gst_chk_hdr table.
+func syncTicketsODBC(cfg *config.Config) ([]entities.Ticket, error) {
+	log.Printf("[micros3700] SyncTickets: reading open checks via ODBC")
+
+	dsn := odbcDSN(cfg)
+	db, err := sql.Open("odbc", fmt.Sprintf("DSN=%s", dsn))
+	if err != nil {
+		log.Printf("[micros3700][WARN] ODBC open (DSN=%s): %v — returning empty ticket list", dsn, err)
+		return []entities.Ticket{}, nil
+	}
+	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Printf("[micros3700][WARN] ODBC ping (DSN=%s): %v — returning empty ticket list", dsn, err)
+		return []entities.Ticket{}, nil
+	}
+
+	rows, err := db.Query(`SELECT h.chk_seq, h.rvc_seq, h.tab_seq, h.chk_ttl, h.chk_opn_tim FROM gst_chk_hdr h WHERE h.chk_clsd_flag = 0 ORDER BY h.chk_seq`)
+	if err != nil {
+		return nil, fmt.Errorf("query gst_chk_hdr: %w", err)
+	}
+	defer rows.Close()
+
+	var out []entities.Ticket
+	for rows.Next() {
+		var chkSeq, rvcSeq, tabSeq, chkTtl int
+		var chkOpnTim time.Time
+		if err := rows.Scan(&chkSeq, &rvcSeq, &tabSeq, &chkTtl, &chkOpnTim); err != nil {
+			return nil, fmt.Errorf("scan gst_chk_hdr row: %w", err)
+		}
+		out = append(out, entities.Ticket{
+			Number:     chkSeq,
+			Table:      tabSeq,
+			CostCenter: rvcSeq,
+			Total:      float64(chkTtl) / 100.0,
+			OpenedAt:   chkOpnTim.Format(time.RFC3339),
+			Open:       true,
+			POSType:    "micros3700",
+		})
+	}
+	return out, rows.Err()
 }
 
 func odbcEmployees(db *sql.DB) ([]entities.Employee, error) {
