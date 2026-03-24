@@ -1,25 +1,33 @@
-# POSitouch Integration Agent
+# Rooam POS Integration Agent (POSitouch + MICROS 3700)
 
-A production-ready Windows service written in Go that bridges on-premise [POSitouch](https://www.positouch.com/) POS systems with the [`positouch-cloud-server`](https://github.com/badpanda83/positouch-cloud-server) running on Railway. It reads POS data from DBF and XML files, syncs it to the cloud, processes incoming orders via POSitouch's XML ordering interface, and reports results back to Railway.
+Production-ready Windows service written in Go that bridges on‑premise POS systems with the Rooam cloud server (Railway).
+
+- **POSitouch**: syncs master data + tickets from DBF/XML and supports **order + payment injection** via POSitouch’s XML ordering interface.
+- **MICROS RES 3700**: syncs **tickets via RTTP (IFS push over TCP)** and reads **master data via Sybase SQL Anywhere 16 (ODBC)**.
+
+> Repo description says this is a POC, but the codebase now contains a real installer flow and multi‑POS driver support.
 
 ---
 
 ## Table of Contents
 
 - [Architecture](#architecture)
+- [Supported POS Systems](#supported-pos-systems)
 - [How It Works](#how-it-works)
 - [Prerequisites](#prerequisites)
 - [Configuration](#configuration)
+  - [POSitouch config](#positouch-config)
+  - [MICROS 3700 config](#micros-3700-config)
 - [Building](#building)
-- [Installer](#installer)
+- [Installer (MSI)](#installer-msi)
 - [Running](#running)
 - [Project Structure](#project-structure)
 - [Data Sources](#data-sources)
 - [Sync Behaviour](#sync-behaviour)
-- [Order Processing Flow](#order-processing-flow)
-- [Payment Processing Flow](#payment-processing-flow)
+- [Order Processing Flow (POSitouch)](#order-processing-flow-positouch)
+- [Payment Processing Flow (POSitouch)](#payment-processing-flow-positouch)
 - [Local HTTP API](#local-http-api)
-- [POSitouch XML Interface](#positouch-xml-interface)
+- [MICROS 3700 Notes](#micros-3700-notes)
 - [Logging](#logging)
 - [Gitignore Notes](#gitignore-notes)
 - [Contributing](#contributing)
@@ -29,32 +37,46 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Windows POS Machine                                          │
-│                                                              │
-│  POSitouch POS                                               │
-│    │                                                         │
-│    ├── writes DBF files (C:\DBF\, C:\SC\)                   │
-│    ├── reads  ORDER*.XML  (OMNIVORE_INORDER dir)             │
-│    └── writes OUT*.XML    (OMNIVORE dir — confirmations)     │
-│                                                              │
-│  rooam-pos-agent.exe  ◄──── rooam_config.json               │
-│    │                                                         │
-│    ├── reads DBF/XML → syncs to Railway every 30min          │
-│    ├── syncs tickets to Railway every 30s                    │
-│    ├── polls Railway for pending orders every 5s             │
-│    ├── polls Railway for pending payments every 5s           │
-│    ├── writes ORDER*.XML to OMNIVORE_INORDER                 │
-│    ├── polls OMNIVORE for OUT*.XML confirmation (≤30s)       │
-│    └── PUTs result back to Railway                           │
-│                                                              │
-│  :8080 (local HTTP API)                                      │
-│    └── POST /api/v1/tickets  (direct local order endpoint)   │
-└──────────────────────────────────────────────────────────────┘
-                         │  HTTPS
-                         ▼
-         positouch-cloud-server (Railway)
+┌──────────────────────────────────────────────────────────────────────────┐
+│ Windows POS Machine                                                      │
+│                                                                          │
+│   rooam-pos-agent.exe  ◄──── rooam_config.json                           │
+│        │                                                                 │
+│        ├── uploads master data to Railway (interval configurable in code)
+│        ├── uploads tickets to Railway                                    │
+│        ├── polls Railway for pending actions                             │
+│        └── exposes local HTTP API (:8080)                                │
+│                                                                          │
+│  POSitouch mode (pos_type=positouch)                                     │
+│    ├── reads DBF + WExport XML                                           │
+│    ├── reads tickets from OMNIVORE + OMNIVORE_CLOSE                       │
+│    └── writes ORDER*.XML to OMNIVORE_INORDER (orders + payments)          │
+│                                                                          │
+│  MICROS 3700 mode (pos_type=micros3700)                                  │
+│    ├── listens for RTTP pushes on TCP :5454 (default)                     │
+│    └── reads master data via Sybase SQL Anywhere 16 through ODBC (Windows)
+└──────────────────────────────────────────────────────────────────────────┘
+                          │  HTTPS
+                          ▼
+                 Rooam cloud server (Railway)
 ```
+
+---
+
+## Supported POS Systems
+
+### POSitouch
+
+- Master data sync from DBF + WExport exports
+- Ticket sync from POSitouch XML ticket feeds
+- **Order injection** via `ORDER*.XML` drop (POSitouch XML ordering)
+- **Payment + close** via `ORDER*.XML` with `Function=4`
+
+### MICROS RES 3700
+
+- **Ticket sync** via IFS/RTTP push interface (TCP). The driver parses RTTP frames and keeps an in‑memory ticket store.
+- **Master data sync** via Sybase SQL Anywhere 16 **ODBC** on Windows (32‑bit DSN, default `Micros`).
+- **Order creation is not supported** by this driver (RTTP is push‑only).
 
 ---
 
@@ -62,83 +84,108 @@ A production-ready Windows service written in Go that bridges on-premise [POSito
 
 ### Startup sequence
 
-1. Kill any stale `WExport.EXE` processes
-2. Load `rooam_config.json`
-3. Run `WExport.EXE` to regenerate `set1.xml` (table layout)
-4. Read all entities from DBF/XML files
-5. Upload all entities to Railway cloud server
-6. Start ticket sync goroutine (every 30 seconds)
-7. Start entity sync goroutine (every 30 minutes)
-8. Start order + payment poller goroutine (every 5 seconds)
-9. Start local HTTP server on `:8080`
-10. Wait for SIGINT/SIGTERM
+1. Load `rooam_config.json`
+2. Select driver based on `pos_type` (`positouch` or `micros3700`)
+3. Perform initial entity sync
+4. Start ticket sync loop
+5. Start poller loop for pending actions (POSitouch order/payment injection)
+6. Start local HTTP server on `:8080`
+7. Wait for SIGINT/SIGTERM
 
-### On every tick
-
-- **Every 30s:** Read all open+closed tickets from `C:\SC\XML\OMNIVORE\` and `C:\SC\XML\OMNIVORE_CLOSE\` and `PUT` them to Railway.
-- **Every 30min:** Re-run WExport, re-read all DBF/XML files, re-upload all 9 entity types.
-- **Every 5s:** `GET` pending orders from Railway, process each one (see below). Also `GET` pending payments and process each one (see [Payment Processing Flow](#payment-processing-flow)).
+> For POSitouch details (WExport, XML directories, confirmation polling) see the POSitouch flows below.
 
 ---
 
 ## Prerequisites
 
 | Requirement | Notes |
-|-------------|-------|
-| Windows machine with POSitouch installed | Agent must run on the same machine as the POS |
-| Go 1.21+ | For building only — the binary has no runtime deps |
-| `WExport.EXE` | Must be present at `C:\SC\WExport.EXE` |
-| POSitouch XML ordering enabled | `spcwin.ini` must have `XMLInOrderPath` and `XMLOutOrderPath` configured |
-| Network access to Railway | HTTPS outbound on port 443 |
+|---|---|
+| Windows machine with the POS installed | Agent should run on the same machine/network segment as the POS system |
+| Go | Needed only to build from source |
+| Network access to the Railway cloud server | HTTPS outbound (443) |
+
+### POSitouch prerequisites
+
+| Requirement | Notes |
+|---|---|
+| POSitouch installed | Agent runs on the POSitouch server/workstation |
+| `WExport.EXE` available | Typically `C:\SC\WExport.EXE` |
+| POSitouch XML ordering enabled | `spcwin.ini` should contain `XMLInOrderPath` and `XMLOutOrderPath` |
+
+### MICROS 3700 prerequisites
+
+| Requirement | Notes |
+|---|---|
+| MICROS RES 3700 with IFS RTTP enabled | RTTP push should be configured to send to the agent host/port |
+| TCP port open | Default **5454** inbound to the agent |
+| Sybase SQL Anywhere 16 ODBC DSN | 32‑bit DSN configured on Windows; default DSN name is **`Micros`** |
 
 ---
 
 ## Configuration
 
-Create `rooam_config.json` in the same directory as the binary. **This file is gitignored and must never be committed.**
+The agent reads `rooam_config.json`.
+
+- For **POSitouch**, you can generate the file using the installer flow or `installer/config_writer`.
+- For **MICROS 3700**, there is an example config: `rooam_config.micros3700.example.json`.
+
+### POSitouch config
+
+A typical POSitouch config includes SC/DBF and XML directories:
 
 ```json
 {
-  "location": {
-    "name": "Smitty's"
-  },
-  "install_dir": "C:\\Users\\Omnivore\\Documents\\POSitouch-Integration",
-  "sc_dir": "C:\\SC",
-  "dbf_dir": "C:\\DBF",
-  "alt_dbf_dir": "C:\\ALTDBF",
-  "xml_dir": "C:\\SC\\XML\\OMNIVORE",
-  "xml_close_dir": "C:\\SC\\XML\\OMNIVORE_CLOSE",
-  "xml_in_order_dir": "C:\\SC\\XML\\OMNIVORE_INORDER",
+  "pos_type": "positouch",
+  "location": { "name": "Smitty's" },
+  "install_dir": "C:\Program Files\Rooam\POSAgent",
+  "sc_dir": "C:\SC",
+  "dbf_dir": "C:\DBF",
+  "alt_dbf_dir": "C:\ALTDBF",
+  "xml_dir": "C:\SC\XML\OMNIVORE",
+  "xml_close_dir": "C:\SC\XML\OMNIVORE_CLOSE",
+  "xml_in_order_dir": "C:\SC\XML\OMNIVORE_INORDER",
   "cloud": {
+    "enabled": true,
     "endpoint": "https://positouch-cloud-server-production.up.railway.app/api/v1/pos-data",
     "api_key": "your-api-key-here"
   }
 }
 ```
 
-### Configuration fields
+### MICROS 3700 config
 
-| Field             | Description                                                    |
-|-------------------|----------------------------------------------------------------|
-| `location.name`   | Location identifier — must match the `locationID` used by Rooam |
-| `install_dir`     | Directory containing the agent binary and config               |
-| `sc_dir`          | POSitouch SC directory (contains `WExport.EXE`, `SPCWIN.ini`) |
-| `dbf_dir`         | Directory containing DBF data files                            |
-| `alt_dbf_dir`     | Alternate DBF directory (fallback for some files)              |
-| `xml_dir`         | POSitouch OMNIVORE directory — contains open tickets + OUT*.XML confirmations |
-| `xml_close_dir`   | POSitouch OMNIVORE_CLOSE directory — contains closed tickets   |
-| `xml_in_order_dir`| POSitouch OMNIVORE_INORDER directory — agent writes ORDER*.XML here |
-| `cloud.endpoint`  | Railway cloud server base URL                                  |
-| `cloud.api_key`   | Bearer token sent with all Railway requests                    |
+Use `pos_type: "micros3700"` and configure RTTP + ODBC:
 
-> ⚠️ **`xml_dir` must be `OMNIVORE` not `OMNIVORE_OPEN`.** The confirmation files (`OUT*.XML`) are written to `OMNIVORE` by POSitouch.
+```json
+{
+  "pos_type": "micros3700",
+  "location": { "name": "My Restaurant", "country": "US", "address1": "456 Elm Street" },
+  "rooam": { "tender_id": "rooam-tender-id", "employee_id": "rooam-employee-id" },
+  "micros3700": {
+    "rttp_port": 5454,
+    "odbc_dsn": "Micros",
+    "revenue_center_id": 1
+  },
+  "cloud": {
+    "enabled": true,
+    "endpoint": "https://your-cloud-server.example.com/api/v1/pos-data",
+    "api_key": "YOUR_API_KEY_HERE"
+  }
+}
+```
+
+Notes:
+
+- Legacy config fields like `transaction_services_url`, and older MySQL fields are retained for backward compatibility in `config/config.go`, but the current implementation uses **RTTP + ODBC**.
+- ODBC access requires **Windows + CGO** builds (the codebase falls back to an empty snapshot if ODBC is unavailable).
 
 ---
 
 ## Building
 
+Build the agent binary:
+
 ```powershell
-cd C:\Users\Omnivore\Documents\POSitouch-Integration
 go build -ldflags="-w -s" -o rooam-pos-agent.exe .
 ```
 
@@ -150,54 +197,35 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-w -s" -o rooam-pos-a
 
 ---
 
-## Installer
+## Installer (MSI)
 
-A standalone installer CLI (`installer.exe`) handles deployment of the POS agent on a Windows machine. Build it with:
+There is a full WiX v4 MSI project under `installer/` (see also `installer/README.md`).
 
-```powershell
-go build -o installer.exe ./installer/
-```
+Key points:
 
-### Subcommands
+- The MSI installs the agent as a Windows Service: **`RooamPOSAgent`**.
+- The UI includes a **POS Type** choice (**POSitouch** vs **MICROS 3700**) and writes a matching `rooam_config.json` via `config_writer.exe`.
+- `installer/detect.ps1` can auto-detect POSitouch paths (`spcwin.exe` + XML directories).
 
-| Command | Description |
-|---|---|
-| `install` | Run preflight checks, configuration wizard, connectivity test, and register the agent as a Windows Service |
-| `uninstall` | Stop and remove the POS agent Windows Service (optionally deletes config) |
-| `configure` | Re-run the configuration wizard to update `rooam_config.json` |
-| `check` | Run pre-flight and connectivity checks only (no installation) |
-| `activate` | OAuth activation gate — stub, not yet available (Phase 3b) |
-| `version` | Print version information |
-
-### Usage
+Build the MSI:
 
 ```powershell
-# Full installation (guided)
-.\installer.exe install
-
-# Check configuration and connectivity without installing
-.\installer.exe check
-
-# Update configuration
-.\installer.exe configure
-
-# Remove the service
-.\installer.exe uninstall
-
-# Print version
-.\installer.exe version
+cd installer
+.\build.ps1
 ```
 
-The `install` subcommand:
-1. Runs initial pre-flight checks (OS, admin privileges, agent binary)
-2. Launches the interactive configuration wizard to generate `rooam_config.json`
-3. Runs full pre-flight checks against the generated config
-4. Runs connectivity checks (cloud endpoint, auth, POS reachability)
-5. Optionally installs and starts the agent as an auto-start Windows Service (`RooamPOSAgent`)
+Output:
+
+```
+installer/out/
+├── POSitouch-Integration.exe
+├── config_writer.exe
+└── RooamPOSAgent-Setup.msi
+```
 
 ---
 
-
+## Running
 
 ```powershell
 .\rooam-pos-agent.exe -config .\rooam_config.json
@@ -205,98 +233,55 @@ The `install` subcommand:
 
 To stop: `Ctrl+C` or send `SIGTERM`. The agent shuts down gracefully.
 
-**Startup log (expected output):**
-
-```
-╔══════════════════════════════════════════╗
-║  rooam-pos-agent v1.0.0                  ║
-║  POSitouch Integration Agent             ║
-╚══════════════════════════════════════════╝
-
-[main] config path : .\rooam_config.json
-[main] location    : Smitty's
-[main] SC dir      : C:\SC\
-[main] DBF dir     : C:\DBF\
-[sync] WExport completed, set1.xml refreshed
-[sync] Loaded 1075 menu items ...
-[sync] uploaded employees, response status: 200 OK
-...
-[sync] All entities uploaded for location: Smitty's
-[ticket_sync] polling tickets every 30s
-[agent] polling Railway for pending orders every 5s
-[server] starting API on :8080
-```
-
 ---
 
 ## Project Structure
 
 ```
 POSitouch-Integration/
-├── main.go              # Entry point — config, startup, goroutines, HTTP server
-├── poller.go            # pollPendingOrders/Payments, reportOrderResult/PaymentResult, putOrderResult/PaymentResult
+├── main.go
+├── poller.go
 ├── config/
-│   └── config.go        # rooam_config.json loader
-├── installer/
-│   ├── main.go          # Installer entry point — subcommand dispatch
-│   ├── preflight.go     # Pre-installation checks
-│   ├── wizard.go        # Interactive config builder (generates rooam_config.json)
-│   ├── service.go       # Windows Service registration/removal (build-tagged)
-│   ├── connectivity.go  # Cloud + POS reachability tests
-│   └── activate.go      # OAuth activation stub (Phase 3b)
+├── driver/
+│   ├── positouch/           # POSitouch driver
+│   └── micros3700/          # MICROS 3700 driver (RTTP + ODBC)
+├── installer/               # WiX v4 MSI + helpers
 ├── ordering/
-│   └── ordering.go      # CreateTicket HTTP handler, WriteOrderXML, FindConfirmation
 ├── positouch/
-│   ├── ticket_cache.go  # ReadAllTickets — parses OMNIVORE + OMNIVORE_CLOSE XML
-│   ├── menu.go          # ParseMenuXML, ParseMenuCategories, ParseMenuModifiers
-│   ├── tables.go        # ParseTablesFromSet1XML
-│   ├── employees.go     # ReadEmployees (USERS.DBF + EMPFILE.DBF)
-│   ├── tenders.go       # ReadTenders (NAMEPAY.DBF / NAMES.DBF fallback)
-│   ├── cost_centers.go  # ReadCostCenters (NAMECC.DBF)
-│   ├── order_types.go   # ReadOrderTypes (MENUS.DBF)
-│   └── order.go         # XML structs for outbound ORDER*.XML
 ├── dbf/
-│   └── reader.go        # Pure-Go dBASE III/IV file reader (no CGO)
 ├── cache/
-│   └── cache.go         # Thread-safe in-memory cache + Data struct
-├── utils/
-│   ├── wexport_layout_manifest.xml   # WExport manifest
-│   └── Export/                       # Generated by WExport (gitignored)
-├── rooam_config.json    # Local config (gitignored)
-└── rooam-pos-agent.exe  # Built binary (gitignored)
+└── utils/
 ```
 
 ---
 
 ## Data Sources
 
-| Entity        | Primary source                        | Fallback                |
-|---------------|---------------------------------------|-------------------------|
-| Cost Centers  | `C:\DBF\NAMECC.DBF`                   | `NAMES.DBF` (CC prefix) |
-| Tenders       | `C:\DBF\NAMEPAY.DBF`                  | `NAMES.DBF` (PY prefix) |
-| Employees     | `C:\DBF\USERS.DBF`                    | + `EMPFILE.DBF` if present |
-| Tables        | `utils/Export/set1.xml` (via WExport) | —                       |
-| Order Types   | `C:\DBF\MENUS.DBF`                    | —                       |
-| Open Tickets  | `C:\SC\XML\OMNIVORE\*.XML`            | —                       |
-| Closed Tickets| `C:\SC\XML\OMNIVORE_CLOSE\*.XML`      | —                       |
-| Menu Items    | `utils/Export/menu_items.xml`         | —                       |
-| Categories    | `utils/Export/menu_categories.xml`    | —                       |
-| Modifiers     | `utils/Export/menu_items.xml` (MajorCategory=11) | —          |
+### POSitouch
 
-> **Security:** `SSN` and `SOC_SEC` fields from `EMPFILE.DBF` are never read or uploaded.
+(unchanged) DBF and XML sources described below.
+
+### MICROS 3700
+
+- Tickets: RTTP push frames via TCP listener (default 5454)
+- Master data: Sybase SQL Anywhere 16 via ODBC DSN (default `Micros`)
 
 ---
 
 ## Sync Behaviour
 
-### Entity sync (every 30 minutes + startup)
+- **Tickets**: pushed to the cloud at a regular interval (and/or on driver-specific schedule)
+- **Entities**: refreshed periodically and uploaded to the cloud
+
+POSitouch specifics:
+
+### Entity sync (POSitouch)
 
 1. Runs `WExport.EXE ExportSettings <manifest>` to regenerate XML exports
 2. Reads all 9 entity types
 3. `PUT`s each to `{cloud.endpoint}/{location.name}/{entity}`
-4. Logs count and HTTP status for each
 
-### Ticket sync (every 30 seconds)
+### Ticket sync (POSitouch)
 
 1. Calls `positouch.ReadAllTickets(xmlDir, xmlCloseDir)`
 2. Deduplicates by ticket number (open wins over closed)
@@ -304,7 +289,9 @@ POSitouch-Integration/
 
 ---
 
-## Order Processing Flow
+## Order Processing Flow (POSitouch)
+
+(Existing diagram/description preserved below — POSitouch only.)
 
 ```
 Railway                          Agent                         POSitouch
@@ -315,13 +302,13 @@ Railway                          Agent                         POSitouch
    │──────────────────────────────►│                               │
    │                               │  WriteOrderXML(req)           │
    │                               │──────────────────────────────►│
-   │                               │  ORDER        .XML written    │
+   │                               │  ORDER*.XML written           │
    │                               │  to OMNIVORE_INORDER          │
    │                               │                               │
    │                               │  poll OMNIVORE for OUT*.XML   │
-   │                               │  every 2s, up to 30s         │
+   │                               │  every 2s, up to 30s          │
    │                               │◄──────────────────────────────│
-   │                               │  OUT   .XML written           │
+   │                               │  OUT*.XML written             │
    │                               │  (ResponseCode=0 = success)   │
    │                               │                               │
    │  PUT /tickets/{ref}/result    │                               │
@@ -330,189 +317,37 @@ Railway                          Agent                         POSitouch
    │    ticket: {...} }            │                               │
 ```
 
-### On each poll cycle (every 5s)
-
-For each pending order:
-1. Unmarshal `payload` into `CreateTicketRequest`
-2. Call `ordering.WriteOrderXML(req, xmlInOrderDir)` — atomically writes `ORDER<random>.XML`
-3. Launch `go reportOrderResult(...)` — non-blocking, so other orders can be processed immediately
-4. If `WriteOrderXML` fails: immediately `PUT` `status="failed"` to Railway
-
-### In `reportOrderResult`
-
-1. Poll `xmlDir` every 2 seconds for `OUT*.XML` where `<ReferenceNumber>` matches
-2. On finding confirmation file:
-   - Delete the `OUT*.XML` file
-   - If `ResponseCode == 0`: read tickets, find matching ticket by `table == req.TableNumber && opened within 60s`, `PUT` `status="created"` with full ticket
-   - If `ResponseCode != 0`: `PUT` `status="failed"` with error text from `<Error><Text>`
-3. After 30 seconds with no confirmation: `PUT` `status="failed"` with timeout message
-
 ---
 
-## Payment Processing Flow
+## Payment Processing Flow (POSitouch)
 
-```
-Railway                          Agent                         POSitouch
-   │                               │                               │
-   │  GET /payments/pending        │                               │
-   │◄──────────────────────────────│                               │
-   │  [ {ref, payload}, ... ]      │                               │
-   │──────────────────────────────►│                               │
-   │                               │  WritePaymentXML(req)         │
-   │                               │──────────────────────────────►│
-   │                               │  ORDER        .XML written    │
-   │                               │  to OMNIVORE_INORDER          │
-   │                               │  (Function=4: pay + close)    │
-   │                               │                               │
-   │                               │  poll OMNIVORE for OUT*.XML   │
-   │                               │  every 2s, up to 30s         │
-   │                               │◄──────────────────────────────│
-   │                               │  OUT   .XML written           │
-   │                               │  (ResponseCode=0 = success)   │
-   │                               │                               │
-   │  PUT /payments/{ref}/result   │                               │
-   │◄──────────────────────────────│                               │
-   │  { status:"paid" }            │                               │
-```
-
-### On each poll cycle (every 5s)
-
-For each pending payment:
-1. Unmarshal `payload` into `ordering.PaymentRequest`
-2. Call `ordering.WritePaymentXML(req, xmlInOrderDir)` — atomically writes `ORDER<random>.XML` with `<Function>4</Function>` (POSitouch pay + close)
-3. Launch `go reportPaymentResult(...)` — non-blocking
-4. If `WritePaymentXML` fails: immediately `PUT` `status="failed"` to Railway
-
-### In `reportPaymentResult`
-
-1. Poll `xmlDir` every 2 seconds for `OUT*.XML` where `<ReferenceNumber>` matches
-2. On finding confirmation file:
-   - Delete the `OUT*.XML` file
-   - If `ResponseCode == 0`: `PUT` `status="paid"` to Railway
-   - If `ResponseCode != 0`: `PUT` `status="failed"` with error text from `<Error><Text>`
-3. After 30 seconds with no confirmation: `PUT` `status="failed"` with timeout message
-
-### Payment XML file (`ORDER*.XML`, Function=4)
-
-Written to `xml_in_order_dir`. POSitouch picks this up and applies the tender to the specified check, then closes it.
-
-```xml
-<Orders>
-  <UpdateOrder>
-    <CheckNumber>62</CheckNumber>
-    <Function>4</Function>
-    <ErrorLevel>2</ErrorLevel>
-    <GuestCheckCopies>0</GuestCheckCopies>
-    <AutoReprintCheckCopies>0</AutoReprintCheckCopies>
-    <ReferenceNumber>rooam-pay-001</ReferenceNumber>
-    <Check>
-      <CheckHeader>
-        <TerminalNumber>1</TerminalNumber>
-      </CheckHeader>
-    </Check>
-    <Payment>
-      <PaymentHeader>
-        <CashierNumber>976</CashierNumber>
-        <TerminalNumber>1</TerminalNumber>
-        <PaymentTerminal>1</PaymentTerminal>
-      </PaymentHeader>
-      <PaymentDetail>
-        <PaymentType>10</PaymentType>
-        <PaymentAmount>42.75</PaymentAmount>
-        <PaymentTip>5.00</PaymentTip>
-        <PaymentMemo>*{rooam-pay-001}</PaymentMemo>
-      </PaymentDetail>
-    </Payment>
-  </UpdateOrder>
-</Orders>
-```
-
-### `PaymentRequest` JSON fields
-
-| Field | Type | Description |
-|---|---|---|
-| `reference_number` | string | Unique payment reference (used for correlation with `OUT*.XML`) |
-| `ticket_number` | int | POSitouch check number to pay |
-| `sub_ticket_number` | int | Sub-check number (optional) |
-| `tender_type_id` | int | POSitouch tender type code |
-| `amount` | int | Payment amount in **cents** (e.g. `4275` = $42.75) |
-| `tip_amount` | int | Tip amount in **cents** (optional) |
-| `allows_tips` | bool | If true, `<PaymentTip>` is included even when `tip_amount` is 0 |
-| `cashier_number` | string | POSitouch cashier/server number |
-| `terminal_number` | string | POSitouch terminal number (used in `CheckHeader`, `PaymentHeader`, and `PaymentTerminal`) |
-| `guest_check_copies` | int | Number of guest check copies to print (optional) |
-| `auto_reprint_check_copies` | int | Number of auto-reprint check copies (optional) |
-| `comment` | string | Free-text comment — written as `*{comment}` in `<PaymentMemo>` (optional) |
+(Existing description preserved below — POSitouch only.)
 
 ---
 
 ## Local HTTP API
 
-The agent exposes a local HTTP server on `:8080`. This is useful for direct testing on the POS machine but is **not reachable from outside** (no port forwarding required or recommended).
+The agent exposes a local HTTP server on `:8080`.
 
-### `POST /api/v1/tickets`
-
-Submit an order directly to the agent (bypasses Railway). The connection is held open synchronously — same logic as the cloud path but without the Railway hop.
-
-**Request body** — same format as `POST /api/v1/pos-data/{locationID}/tickets` on Railway (see cloud server README).
-
-**Responses:**
-
-| Status | Meaning |
-|--------|---------|
-| `201 Created` | POSitouch confirmed — body contains `{"status":"created","ticket":{...}}` |
-| `400 Bad Request` | Validation failure or POSitouch rejection |
-| `504 Gateway Timeout` | No `OUT*.XML` received within 30s |
-
-### `GET /api/v1/pos-data/{locationID}/{entity}`
-
-Read the locally cached entity data (same data that was last uploaded to Railway).
-
-### `GET /health`
-
-```json
-{ "status": "ok" }
-```
+- `POST /api/v1/tickets` — submit a POSitouch order directly (bypasses Railway)
+- `GET /health` — liveness check
 
 ---
 
-## POSitouch XML Interface
+## MICROS 3700 Notes
 
-### Outbound order file (`ORDER*.XML`)
-
-Written to `xml_in_order_dir`. POSitouch picks this up automatically.
-
-```xml
-
-```
-
-### Inbound confirmation file (`OUT*.XML`)
-
-Written by POSitouch to `xml_dir` after processing an order.
-
-```xml
-
-```
-
-The agent deletes the `OUT*.XML` file after reading it.
+- RTTP messages are acknowledged with `RECEIVED`.
+- The driver keeps tickets in memory for a TTL (currently 4 hours) and returns them from `SyncTickets()`.
+- `SyncEntities()` attempts ODBC; if unavailable, it logs a warning and returns an empty snapshot so ticket syncing continues.
 
 ---
 
 ## Logging
 
-All output goes to stdout. Log prefixes:
+All output goes to stdout. Log prefixes include:
 
-| Prefix | Source |
-|--------|--------|
-| `[main]` | Startup and config |
-| `[sync]` | Entity sync (30min cycle) |
-| `[ticket_sync]` | Ticket sync (30s cycle) |
-| `[ticket_cache]` | Ticket XML parsing |
-| `[WExport]` | WExport.EXE execution |
-| `[poller]` | Pending order polling and result reporting |
-| `[orders]` | Local HTTP order handler |
-| `[server]` | Local HTTP server |
-| `[positouch]` | DBF file reading |
+- `[micros3700]` / `[micros3700][rttp]` — MICROS 3700 driver
+- `[sync]`, `[ticket_sync]`, `[poller]`, `[server]`, `[positouch]` — shared agent paths
 
 ---
 
@@ -525,18 +360,14 @@ The following files are intentionally excluded from version control:
 | `rooam_config.json` | Contains API keys and local paths — never commit |
 | `rooam_cache.json` | Runtime cache — regenerated on startup |
 | `rooam-pos-agent.exe` | Built binary — build locally |
+| `installer/out/` | Build artifacts |
 | `utils/Export/` | WExport output — regenerated on startup |
-| `*.LOG`, `agent*.log` | Runtime logs |
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please open an issue before large changes. All PRs should:
-
-- Follow standard Go formatting (`gofmt`).
-- Include tests for new functionality.
-- Update this README if behaviour changes.
+Contributions are welcome. Please open an issue before large changes and update documentation when behaviour changes.
 
 ---
 
