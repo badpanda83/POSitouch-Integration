@@ -11,12 +11,19 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/badpanda83/POSitouch-Integration/config"
 )
+
+// isWindows returns true when running on Microsoft Windows.
+func isWindows() bool {
+	return runtime.GOOS == "windows"
+}
 
 // prompt prints "label [defaultVal]: " and reads a line from the scanner.
 // If the user enters nothing, defaultVal is returned.
@@ -345,5 +352,118 @@ func runWizard() (*config.Config, error) {
 	}
 
 	fmt.Printf("[wizard] Config written to %s\n", config.DefaultConfigPath)
+
+	// --- SUBSCRIPTION ENROLLMENT ---
+	// Direct the operator to subscribe via Stripe. The agent will not connect
+	// to the cloud server until the subscription is active — this replaces the
+	// old self-service / download-and-configure model.
+	fmt.Println()
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println(" SUBSCRIPTION REQUIRED")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println(" The Rooam POS Agent requires an active subscription")
+	fmt.Println(" ($5/mo, multi-currency). Your API key will be")
+	fmt.Println(" activated automatically once payment is confirmed.")
+	fmt.Println()
+
+	billingServerURL := prompt(scanner, "Billing server URL (leave blank to enroll later)",
+		"https://billing.rooam.app")
+	if billingServerURL != "" {
+		contactEmail := prompt(scanner, "Contact / billing email", "")
+		if err := enrollForSubscription(scanner, billingServerURL, locationID, contactEmail); err != nil {
+			fmt.Printf("⚠ Could not open subscription checkout: %v\n", err)
+			fmt.Println("  You can subscribe manually at https://billing.rooam.app/checkout")
+			fmt.Printf("  and enter location ID: %q\n", locationID)
+		}
+	}
+
 	return cfg, nil
+}
+
+// enrollForSubscription calls the billing server to create a Stripe Checkout
+// Session for the given location and opens the resulting URL in the default
+// browser. If opening a browser is not possible, the URL is printed to stdout
+// so the operator can navigate to it manually.
+func enrollForSubscription(scanner *bufio.Scanner, billingServerURL, locationID, email string) error {
+	checkoutEndpoint := strings.TrimRight(billingServerURL, "/") + "/checkout"
+
+	payload, err := json.Marshal(map[string]string{
+		"location_id": locationID,
+		"email":       email,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, checkoutEndpoint, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request to billing server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("billing server returned %s", resp.Status)
+	}
+
+	var result struct {
+		URL string `json:"url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+	if result.URL == "" {
+		return fmt.Errorf("billing server returned empty checkout URL")
+	}
+
+	fmt.Println()
+	fmt.Printf("✓ Checkout session created.\n")
+	fmt.Printf("  Opening browser to: %s\n", result.URL)
+	fmt.Println()
+
+	if err := openBrowser(result.URL); err != nil {
+		// Not a fatal error — print the URL so the user can open it manually.
+		fmt.Printf("  (Could not open browser automatically: %v)\n", err)
+		fmt.Printf("  Please open the following URL in your browser to subscribe:\n")
+		fmt.Printf("  %s\n", result.URL)
+	}
+
+	fmt.Println()
+	fmt.Println("  Complete payment in the browser, then press Enter to continue...")
+	scanner.Scan()
+	return nil
+}
+
+// openBrowser opens a URL in the system's default browser.
+// On Windows, this uses cmd /c start; on macOS, open; on Linux, xdg-open.
+func openBrowser(rawURL string) error {
+	// Validate the URL before passing it to a shell command.
+	parsed, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if parsed.Scheme != "https" && parsed.Scheme != "http" {
+		return fmt.Errorf("refusing to open non-http(s) URL scheme %q", parsed.Scheme)
+	}
+	safeURL := parsed.String()
+
+	var cmd *exec.Cmd
+	switch {
+	case isWindows():
+		// Use cmd /c start to open the URL in the default browser.
+		// The empty string before the URL is the window title — required by
+		// cmd /c start when the URL contains special characters.
+		cmd = exec.Command("cmd", "/c", "start", "", safeURL)
+	default:
+		// Fallback: just print the URL (non-Windows environments such as CI).
+		return fmt.Errorf("openBrowser: not implemented for this OS; open manually: %s", safeURL)
+	}
+
+	return cmd.Start()
 }
