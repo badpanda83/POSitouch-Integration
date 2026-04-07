@@ -42,6 +42,33 @@ type CloudConfig struct {
 	APIKey   string `json:"api_key"`
 }
 
+// StripeConfig holds Stripe billing settings used by the subscription server.
+// All fields can be supplied via JSON config or overridden by environment variables.
+type StripeConfig struct {
+	// SecretKey is the Stripe secret API key (sk_live_... or sk_test_...).
+	// Override with STRIPE_SECRET_KEY env var.
+	SecretKey string `json:"secret_key,omitempty"`
+
+	// WebhookSecret is the Stripe webhook signing secret (whsec_...).
+	// Override with STRIPE_WEBHOOK_SECRET env var.
+	WebhookSecret string `json:"webhook_secret,omitempty"`
+
+	// PriceID is the Stripe Price ID for the $5/mo subscription (price_...).
+	// Override with STRIPE_PRICE_ID env var.
+	PriceID string `json:"price_id,omitempty"`
+
+	// SuccessURL is where Stripe redirects after a successful checkout.
+	// Override with STRIPE_SUCCESS_URL env var.
+	SuccessURL string `json:"success_url,omitempty"`
+
+	// CancelURL is where Stripe redirects if the customer cancels checkout.
+	// Override with STRIPE_CANCEL_URL env var.
+	CancelURL string `json:"cancel_url,omitempty"`
+
+	// Port is the port the Stripe webhook/checkout server listens on (default 3000).
+	Port string `json:"port,omitempty"`
+}
+
 // OAuthConfig holds settings for OAuth 2.0 / OIDC authentication.
 // Only used when auth_mode == "oauth". Currently stubbed — see TODO(phase-3b).
 type OAuthConfig struct {
@@ -58,6 +85,10 @@ type Config struct {
 	Rooam     Rooam       `json:"rooam"`
 	POSitouch POSitouch   `json:"positouch"`
 	Cloud     CloudConfig `json:"cloud"`
+
+	// Stripe holds billing/subscription settings for the Stripe server component.
+	// All fields are optional and can be provided via environment variables.
+	Stripe *StripeConfig `json:"stripe,omitempty"`
 
 	// AuthMode selects the authentication provider. Values: "static" (default) | "oauth"
 	// TODO(phase-3b): set to "oauth" once OAuthProvider is implemented.
@@ -160,6 +191,42 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.LocationID == "" {
 		cfg.LocationID = cfg.Location.Name
+	}
+
+	// Populate Stripe config from environment variables when not set in JSON.
+	// This allows secrets to be injected at runtime (e.g. Railway env vars)
+	// without committing them to rooam_config.json.
+	if cfg.Stripe == nil {
+		cfg.Stripe = &StripeConfig{}
+	}
+	if cfg.Stripe.SecretKey == "" {
+		cfg.Stripe.SecretKey = os.Getenv("STRIPE_SECRET_KEY")
+	}
+	if cfg.Stripe.WebhookSecret == "" {
+		cfg.Stripe.WebhookSecret = os.Getenv("STRIPE_WEBHOOK_SECRET")
+	}
+	if cfg.Stripe.PriceID == "" {
+		cfg.Stripe.PriceID = os.Getenv("STRIPE_PRICE_ID")
+	}
+	if cfg.Stripe.SuccessURL == "" {
+		cfg.Stripe.SuccessURL = os.Getenv("STRIPE_SUCCESS_URL")
+	}
+	if cfg.Stripe.CancelURL == "" {
+		cfg.Stripe.CancelURL = os.Getenv("STRIPE_CANCEL_URL")
+	}
+	if cfg.Stripe.Port == "" {
+		if p := os.Getenv("STRIPE_SERVER_PORT"); p != "" {
+			cfg.Stripe.Port = p
+		} else {
+			cfg.Stripe.Port = "3000"
+		}
+	}
+	// If no Stripe credentials are set at all, nil out the struct so callers
+	// can use cfg.Stripe == nil as "Stripe not configured".
+	// Require SecretKey, WebhookSecret, and PriceID — the server cannot operate
+	// correctly without all three.
+	if cfg.Stripe.SecretKey == "" || cfg.Stripe.WebhookSecret == "" || cfg.Stripe.PriceID == "" {
+		cfg.Stripe = nil
 	}
 
 	return &cfg, nil

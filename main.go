@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/badpanda83/POSitouch-Integration/auth"
+	"github.com/badpanda83/POSitouch-Integration/billing"
 	"github.com/badpanda83/POSitouch-Integration/cache"
 	"github.com/badpanda83/POSitouch-Integration/config"
 	"github.com/badpanda83/POSitouch-Integration/driver"
@@ -307,6 +308,28 @@ func main() {
 			log.Fatalf("[server] ListenAndServe: %v", err)
 		}
 	}()
+
+	// Start the Stripe billing server on a separate port (default :3000) when
+	// Stripe credentials are present. This server handles webhook events from
+	// Stripe and provides a checkout session creation endpoint for the installer
+	// wizard and web portal.
+	if cfg.Stripe != nil {
+		bsrv := &billing.Server{
+			StripeSecretKey: cfg.Stripe.SecretKey,
+			WebhookSecret:   cfg.Stripe.WebhookSecret,
+			PriceID:         cfg.Stripe.PriceID,
+			SuccessURL:      cfg.Stripe.SuccessURL,
+			CancelURL:       cfg.Stripe.CancelURL,
+			CloudEndpoint:   strings.TrimRight(cfg.Cloud.Endpoint, "/"),
+			CloudAPIKey:     cfg.Cloud.APIKey,
+			Port:            cfg.Stripe.Port,
+		}
+		go func() {
+			if err := bsrv.Start(); err != nil {
+				log.Fatalf("[billing] server exited: %v", err)
+			}
+		}()
+	}
 
 	// --- GRACEFUL SHUTDOWN ---
 	// Wait for an OS signal (interactive) or an SCM Stop/Shutdown (service mode).

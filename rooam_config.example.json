@@ -1,0 +1,25 @@
+{
+  "pos_type": "positouch",
+  "location": {
+    "name": "My Restaurant"
+  },
+  "positouch": {
+    "spcwin_path": "C:\\SC\\spcwin.exe"
+  },
+  "xml_dir": "C:\\SC\\XML",
+  "xml_close_dir": "C:\\SC\\XMLCLOSE",
+  "xml_inorder_dir": "C:\\SC\\INORDER",
+  "cloud": {
+    "enabled": true,
+    "endpoint": "https://your-cloud-server.railway.app/api/v1/pos-data",
+    "api_key": "YOUR_API_KEY_HERE"
+  },
+  "stripe": {
+    "secret_key": "",
+    "webhook_secret": "",
+    "price_id": "price_XXXXXXXXXXXXXXXXXX",
+    "success_url": "https://your-site.example.com/success",
+    "cancel_url": "https://your-site.example.com/cancel",
+    "port": "3000"
+  }
+}

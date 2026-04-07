@@ -27,6 +27,7 @@ Production-ready Windows service written in Go that bridges on‑premise POS sys
 - [Order Processing Flow (POSitouch)](#order-processing-flow-positouch)
 - [Payment Processing Flow (POSitouch)](#payment-processing-flow-positouch)
 - [Local HTTP API](#local-http-api)
+- [Stripe Billing Server](#stripe-billing-server)
 - [MICROS 3700 Notes](#micros-3700-notes)
 - [Logging](#logging)
 - [Gitignore Notes](#gitignore-notes)
@@ -331,6 +332,71 @@ The agent exposes a local HTTP server on `:8080`.
 
 - `POST /api/v1/tickets` — submit a POSitouch order directly (bypasses Railway)
 - `GET /health` — liveness check
+
+---
+
+## Stripe Billing Server
+
+When Stripe credentials are configured (via `rooam_config.json` or environment variables), a second HTTP server starts on port **`3000`** (configurable via `stripe.port` or `STRIPE_SERVER_PORT`). This server handles subscription billing and should be deployed on a public-facing host (e.g. Railway) where Stripe can reach it.
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/webhook` | `POST` | Receives and verifies Stripe webhook events. Activates or deactivates tenants on the cloud server. |
+| `/checkout` | `POST` | Creates a Stripe Checkout Session and returns its URL. Used by the installer wizard and web portal. |
+| `/health` | `GET` | Liveness probe — returns `{"status":"ok"}`. |
+
+### Webhook events handled
+
+| Event | Action |
+|---|---|
+| `checkout.session.completed` | Activate tenant (set `active=true`) on cloud server |
+| `customer.subscription.deleted` | Deactivate tenant (set `active=false`) on cloud server |
+| `invoice.payment_failed` | Deactivate tenant (set `active=false`) on cloud server |
+
+All webhook payloads are verified against the `STRIPE_WEBHOOK_SECRET` using HMAC-SHA256 before any action is taken. Requests with invalid or missing signatures are rejected with `401 Unauthorized`.
+
+### Subscription flow
+
+```
+Customer runs installer → wizard collects POS credentials
+        ↓
+Wizard POSTs { location_id, email } to POST /checkout
+        ↓
+Server creates Stripe Checkout Session (metadata.location_id = <id>)
+        ↓
+Wizard opens browser to Stripe hosted checkout (customer's local currency)
+        ↓
+Customer pays $5/mo
+        ↓
+Stripe fires checkout.session.completed webhook
+        ↓
+POST /webhook verifies signature → ActivateTenant(locationID)
+        ↓
+Cloud server sets active=true → agent starts syncing data 🎉
+```
+
+**No free tier.** Tenants are inactive by default and only become active after a successful Stripe payment. Cancellation or payment failure deactivates the tenant automatically.
+
+### Stripe configuration
+
+Set these in `rooam_config.json` under the `stripe` key, or via environment variables:
+
+| JSON key | Environment variable | Description |
+|---|---|---|
+| `stripe.secret_key` | `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_...` or `sk_test_...`) |
+| `stripe.webhook_secret` | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
+| `stripe.price_id` | `STRIPE_PRICE_ID` | Stripe Price ID for the subscription (`price_...`) |
+| `stripe.success_url` | `STRIPE_SUCCESS_URL` | Redirect URL after successful payment |
+| `stripe.cancel_url` | `STRIPE_CANCEL_URL` | Redirect URL after cancelled checkout |
+| `stripe.port` | `STRIPE_SERVER_PORT` | Port for the billing server (default `3000`) |
+
+**Multi-currency** is handled automatically by Stripe. Set up your price in the Stripe Dashboard with automatic currency conversion enabled — customers are charged in their local currency.
+
+> **Security:** Never commit `stripe.secret_key` or `stripe.webhook_secret` to source control. Use environment variables on Railway.
+
+See `rooam_config.example.json` for a full configuration example.
 
 ---
 
