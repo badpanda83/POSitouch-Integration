@@ -223,7 +223,9 @@ func Load(path string) (*Config, error) {
 	}
 	// If no Stripe credentials are set at all, nil out the struct so callers
 	// can use cfg.Stripe == nil as "Stripe not configured".
-	if cfg.Stripe.SecretKey == "" && cfg.Stripe.WebhookSecret == "" {
+	// Require SecretKey, WebhookSecret, and PriceID — the server cannot operate
+	// correctly without all three.
+	if cfg.Stripe.SecretKey == "" || cfg.Stripe.WebhookSecret == "" || cfg.Stripe.PriceID == "" {
 		cfg.Stripe = nil
 	}
 

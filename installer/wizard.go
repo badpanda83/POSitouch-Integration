@@ -25,6 +25,9 @@ func isWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
+// defaultBillingServerURL is the default URL for the Rooam billing server.
+const defaultBillingServerURL = "https://billing.rooam.app"
+
 // prompt prints "label [defaultVal]: " and reads a line from the scanner.
 // If the user enters nothing, defaultVal is returned.
 func prompt(scanner *bufio.Scanner, label, defaultVal string) string {
@@ -367,12 +370,12 @@ func runWizard() (*config.Config, error) {
 	fmt.Println()
 
 	billingServerURL := prompt(scanner, "Billing server URL (leave blank to enroll later)",
-		"https://billing.rooam.app")
+		defaultBillingServerURL)
 	if billingServerURL != "" {
 		contactEmail := prompt(scanner, "Contact / billing email", "")
 		if err := enrollForSubscription(scanner, billingServerURL, locationID, contactEmail); err != nil {
 			fmt.Printf("⚠ Could not open subscription checkout: %v\n", err)
-			fmt.Println("  You can subscribe manually at https://billing.rooam.app/checkout")
+			fmt.Printf("  You can subscribe manually at %s/checkout\n", defaultBillingServerURL)
 			fmt.Printf("  and enter location ID: %q\n", locationID)
 		}
 	}
@@ -457,9 +460,10 @@ func openBrowser(rawURL string) error {
 	switch {
 	case isWindows():
 		// Use cmd /c start to open the URL in the default browser.
-		// The empty string before the URL is the window title — required by
-		// cmd /c start when the URL contains special characters.
-		cmd = exec.Command("cmd", "/c", "start", "", safeURL)
+		// The window title argument must be explicitly set to "" (two double-quote
+		// characters) — if omitted, cmd.exe may misinterpret URLs that contain
+		// special characters such as & or = as shell directives.
+		cmd = exec.Command("cmd", "/c", "start", `""`, safeURL)
 	default:
 		// Fallback: just print the URL (non-Windows environments such as CI).
 		return fmt.Errorf("openBrowser: not implemented for this OS; open manually: %s", safeURL)

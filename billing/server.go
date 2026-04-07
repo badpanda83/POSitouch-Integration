@@ -15,6 +15,11 @@ import (
 	"time"
 )
 
+// webhookTimestampTolerance is the maximum age of a Stripe webhook timestamp.
+// Requests older than this are rejected to prevent replay attacks.
+// Stripe's own recommendation is 300 seconds (5 minutes).
+const webhookTimestampTolerance = 300 * time.Second
+
 // Server is the Stripe billing HTTP server.
 // It exposes:
 //
@@ -182,10 +187,13 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[billing] tenant %q activated", locationID)
 		}
 
-	case "customer.subscription.deleted", "invoice.payment_failed":
+	case "customer.subscription.deleted":
+		// The event object IS the subscription. location_id is stored in
+		// subscription metadata (set via subscription_data[metadata] during
+		// checkout session creation).
 		locationID := event.Data.Object.Metadata["location_id"]
 		if locationID == "" {
-			log.Printf("[billing] %s: missing location_id in metadata", event.Type)
+			log.Printf("[billing] %s: missing location_id in subscription metadata", event.Type)
 			break
 		}
 		if err := DeactivateTenant(s.CloudEndpoint, s.CloudAPIKey, locationID); err != nil {
@@ -238,7 +246,7 @@ func (s *Server) verifyStripeSignature(sigHeader string, body []byte) error {
 	if err != nil {
 		return fmt.Errorf("invalid timestamp in Stripe-Signature: %w", err)
 	}
-	if time.Since(time.Unix(ts, 0)) > 5*time.Minute {
+	if time.Since(time.Unix(ts, 0)) > webhookTimestampTolerance {
 		return fmt.Errorf("webhook timestamp too old — possible replay attack")
 	}
 
@@ -269,7 +277,11 @@ func (s *Server) createCheckoutSession(locationID, email string) (string, error)
 	form.Set("mode", "subscription")
 	form.Set("line_items[0][price]", s.PriceID)
 	form.Set("line_items[0][quantity]", "1")
+	// Store location_id in both the session metadata and the subscription
+	// metadata. Session metadata is read by checkout.session.completed;
+	// subscription metadata is read by customer.subscription.deleted.
 	form.Set("metadata[location_id]", locationID)
+	form.Set("subscription_data[metadata][location_id]", locationID)
 	if email != "" {
 		form.Set("customer_email", email)
 	}
